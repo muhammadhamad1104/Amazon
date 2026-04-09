@@ -2,6 +2,9 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import authRoutes from './routes/auth.js';
 import productRoutes from './routes/products.js';
 import cartRoutes from './routes/cart.js';
@@ -11,6 +14,11 @@ import adminRoutes from './routes/admin.js';
 dotenv.config();
 
 const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const frontendDistPath = path.resolve(__dirname, '../frontend/dist');
+const frontendIndexPath = path.join(frontendDistPath, 'index.html');
+const hasFrontendBuild = fs.existsSync(frontendIndexPath);
 
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
@@ -48,13 +56,29 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
 
-app.get('/', (req, res) => {
-  res.json({ name: 'IRFWARDROBE API', status: 'OK' });
+app.use('/api', (req, res) => {
+  res.status(404).json({ message: 'API route not found' });
 });
 
-app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' });
-});
+if (hasFrontendBuild) {
+  app.use(express.static(frontendDistPath));
+
+  app.get('*', (req, res) => {
+    res.sendFile(frontendIndexPath);
+  });
+} else {
+  app.get('/', (req, res) => {
+    res.json({
+      name: 'IRFWARDROBE API',
+      status: 'OK',
+      message: 'Frontend build not found. Build frontend to serve the website from this domain.'
+    });
+  });
+
+  app.use((req, res) => {
+    res.status(404).json({ message: 'Route not found' });
+  });
+}
 
 app.use((err, req, res, next) => {
   if (process.env.NODE_ENV !== 'production') {
@@ -95,4 +119,9 @@ connectDB();
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  if (hasFrontendBuild) {
+    console.log(`Serving frontend from ${frontendDistPath}`);
+  } else {
+    console.log('Frontend build not found at ../frontend/dist');
+  }
 });

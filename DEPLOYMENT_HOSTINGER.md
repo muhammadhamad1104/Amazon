@@ -2,6 +2,35 @@
 
 This project is now configured for deployment with environment variables.
 
+## Single-Domain Monorepo (Express Serves Frontend)
+
+Use this mode when you want one domain (`irfwardrobe.com`) for both website and API.
+
+- Deploy the Node.js app from repo root directory `backend` (Hostinger Node.js setup).
+- During backend install, frontend is built automatically from `../frontend`.
+- Express serves:
+  - API routes from `/api/*`
+  - Frontend (React build) for all non-API routes.
+
+Required backend environment values:
+- `NODE_ENV=production`
+- `MONGODB_URI=<your-mongodb-uri>`
+- `JWT_SECRET=<long-random-secret>`
+- `CORS_ORIGINS=https://irfwardrobe.com,https://www.irfwardrobe.com`
+
+Important notes:
+- Do **not** set `VITE_API_URL` in backend environment variables.
+- In `frontend/.env`, use `VITE_API_URL=/api` for single-domain mode.
+- `PORT` can be omitted so Hostinger injects it automatically.
+
+DNS for single-domain mode:
+- Point `@` (and `www` via CNAME) to your active Hostinger website target.
+- If `api` subdomain is not used, it can be removed.
+
+Quick checks:
+- `https://irfwardrobe.com/api/health` returns JSON status OK.
+- `https://irfwardrobe.com` opens React frontend.
+
 ## 1) Backend Deployment (Hostinger Node.js)
 
 - Upload the `backend` folder to your Node.js app directory.

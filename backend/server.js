@@ -16,9 +16,20 @@ dotenv.config();
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const frontendDistPath = path.resolve(__dirname, '../frontend/dist');
-const frontendIndexPath = path.join(frontendDistPath, 'index.html');
-const hasFrontendBuild = fs.existsSync(frontendIndexPath);
+
+const frontendDistCandidates = [
+  path.resolve(__dirname, '../frontend/dist'),
+  path.resolve(__dirname, './dist')
+];
+
+const frontendDistPath = frontendDistCandidates.find((candidatePath) => (
+  fs.existsSync(path.join(candidatePath, 'index.html'))
+));
+
+const hasFrontendBuild = Boolean(frontendDistPath);
+const frontendIndexPath = hasFrontendBuild
+  ? path.join(frontendDistPath, 'index.html')
+  : null;
 
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
@@ -122,6 +133,6 @@ app.listen(PORT, () => {
   if (hasFrontendBuild) {
     console.log(`Serving frontend from ${frontendDistPath}`);
   } else {
-    console.log('Frontend build not found at ../frontend/dist');
+    console.log('Frontend build not found at ../frontend/dist or ./dist');
   }
 });

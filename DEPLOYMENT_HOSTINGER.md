@@ -7,7 +7,8 @@ This project is now configured for deployment with environment variables.
 Use this mode when you want one domain (`irfwardrobe.com`) for both website and API.
 
 - Deploy the Node.js app from repo root directory `backend` (Hostinger Node.js setup).
-- During backend install, frontend is built automatically from `../frontend`.
+- During backend install, frontend is built automatically from `../frontend` when available.
+- Built files are copied to `backend/dist` and served from there as fallback.
 - Express serves:
   - API routes from `/api/*`
   - Frontend (React build) for all non-API routes.
@@ -30,6 +31,10 @@ DNS for single-domain mode:
 Quick checks:
 - `https://irfwardrobe.com/api/health` returns JSON status OK.
 - `https://irfwardrobe.com` opens React frontend.
+
+If root returns JSON with `Frontend build not found...`:
+- Deployment likely did not include frontend source.
+- Ensure the latest backend deployment has run after these changes.
 
 ## 1) Backend Deployment (Hostinger Node.js)
 

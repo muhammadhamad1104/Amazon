@@ -1,0 +1,293 @@
+.dashboard-overview {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.dashboard-header {
+  margin-bottom: 2rem;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dashboard-header h1 {
+  font-size: 2.5rem;
+  color: #131921;
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-subtitle {
+  color: #666;
+  font-size: 1.1rem;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.stat-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  transition: all 0.3s ease;
+  animation: slideUp 0.6s ease-out backwards;
+  border-left: 4px solid transparent;
+}
+
+.stat-card:nth-child(1) { animation-delay: 0.1s; }
+.stat-card:nth-child(2) { animation-delay: 0.2s; }
+.stat-card:nth-child(3) { animation-delay: 0.3s; }
+.stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card.products {
+  border-left-color: #3498db;
+}
+
+.stat-card.orders {
+  border-left-color: #e74c3c;
+}
+
+.stat-card.revenue {
+  border-left-color: #27ae60;
+}
+
+.stat-card.users {
+  border-left-color: #9b59b6;
+}
+
+.stat-icon-wrapper {
+  width: 70px;
+  height: 70px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.stat-card:hover .stat-icon-wrapper {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.stat-card.products .stat-icon-wrapper {
+  background: rgba(52, 152, 219, 0.1);
+}
+
+.stat-card.orders .stat-icon-wrapper {
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.stat-card.revenue .stat-icon-wrapper {
+  background: rgba(39, 174, 96, 0.1);
+}
+
+.stat-card.users .stat-icon-wrapper {
+  background: rgba(155, 89, 182, 0.1);
+}
+
+.stat-icon {
+  font-size: 2rem;
+}
+
+.stat-card.products .stat-icon {
+  color: #3498db;
+}
+
+.stat-card.orders .stat-icon {
+  color: #e74c3c;
+}
+
+.stat-card.revenue .stat-icon {
+  color: #27ae60;
+}
+
+.stat-card.users .stat-icon {
+  color: #9b59b6;
+}
+
+.stat-info h3 {
+  font-size: 0.95rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #131921;
+  margin: 0;
+}
+
+/* Recent Products Section */
+.recent-products-section {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  animation: fadeIn 0.8s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.recent-products-section h2 {
+  color: #131921;
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+}
+
+.products-table-wrapper {
+  overflow-x: auto;
+}
+
+.products-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.products-table thead {
+  background: #f8f9fa;
+}
+
+.products-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #131921;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.products-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333;
+}
+
+.products-table tbody tr {
+  transition: background 0.2s ease;
+}
+
+.products-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.product-thumb {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.category-badge {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  background: linear-gradient(135deg, #ff9900 0%, #ff7700 100%);
+  color: white;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.price-cell {
+  font-weight: 600;
+  color: #27ae60;
+  font-size: 1.1rem;
+}
+
+.stock-badge {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.stock-badge.in-stock {
+  background: rgba(39, 174, 96, 0.1);
+  color: #27ae60;
+}
+
+.stock-badge.low-stock {
+  background: rgba(231, 76, 60, 0.1);
+  color: #e74c3c;
+}
+
+.rating-badge {
+  font-weight: 600;
+  color: #f39c12;
+}
+
+@media (max-width: 768px) {
+  .dashboard-header h1 {
+    font-size: 2rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .stat-card {
+    padding: 1.5rem;
+  }
+
+  .recent-products-section {
+    padding: 1.5rem;
+  }
+
+  .recent-products-section h2 {
+    font-size: 1.5rem;
+  }
+
+  .products-table th,
+  .products-table td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .product-thumb {
+    width: 40px;
+    height: 40px;
+  }
+}

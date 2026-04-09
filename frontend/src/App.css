@@ -1,0 +1,148 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+  color: #333;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Global Button Styles - Match Signup Button */
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* Primary Button Style - Matching Header Signup Button */
+.btn,
+button.primary-btn,
+.primary-btn,
+.btn-primary,
+.view-all-btn,
+.shop-now-btn,
+.add-to-cart-btn,
+.submit-btn,
+.btn-submit,
+.update-btn,
+.load-more-btn,
+.submit-review-btn {
+  background: #ff9900;
+  color: white;
+  padding: 0.5rem 1.5rem;
+  border-radius: 4px;
+  border: none;
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+  display: inline-block;
+  text-align: center;
+  font-size: 1rem;
+}
+
+.btn:hover,
+button.primary-btn:hover,
+.primary-btn:hover,
+.btn-primary:hover,
+.view-all-btn:hover,
+.shop-now-btn:hover,
+.add-to-cart-btn:hover,
+.submit-btn:hover:not(:disabled),
+.btn-submit:hover:not(:disabled),
+.update-btn:hover:not(:disabled),
+.load-more-btn:hover,
+.submit-review-btn:hover {
+  background: #ff8800;
+}
+
+/* Secondary Button Style */
+.btn.secondary,
+button.secondary-btn,
+.secondary-btn,
+.btn-products,
+.reset-btn {
+  background: white;
+  color: #131921;
+  border: 2px solid #131921;
+  padding: 0.5rem 1.5rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+}
+
+.btn.secondary:hover,
+button.secondary-btn:hover,
+.secondary-btn:hover,
+.btn-products:hover,
+.reset-btn:hover {
+  background: #131921;
+  color: white;
+}
+
+/* Disabled Button State */
+.btn:disabled,
+button:disabled,
+.submit-btn:disabled,
+.btn-submit:disabled,
+.update-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Toast Customization */
+.Toastify__toast {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.Toastify__toast--success {
+  background: #28a745;
+}
+
+.Toastify__toast--error {
+  background: #dc3545;
+}
+
+.Toastify__toast--info {
+  background: #17a2b8;
+}
+
+.Toastify__toast--warning {
+  background: #ffc107;
+  color: #333;
+}

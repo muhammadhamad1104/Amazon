@@ -1,0 +1,226 @@
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f8f9fa;
+}
+
+/* Desktop Sidebar */
+.admin-sidebar {
+  width: 280px;
+  background: linear-gradient(135deg, #131921 0%, #232f3e 100%);
+  color: white;
+  padding: 2rem 0;
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}
+
+.sidebar-header {
+  padding: 0 2rem 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-left: 3.5rem;
+  margin-bottom: 1rem;
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.sidebar-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sidebar-header h2 {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(90deg, #ff9900, #ff7700);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.admin-name {
+  font-size: 0.9rem;
+  opacity: 0.7;
+  margin: 0;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 2rem 0;
+  overflow-y: auto;
+}
+
+.nav-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 2rem;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left;
+  font-size: 1rem;
+  border-left: 4px solid transparent;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-left-color: #ff9900;
+}
+
+.nav-item.active {
+  background: rgba(255, 153, 0, 0.2);
+  border-left-color: #ff9900;
+}
+
+.nav-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.nav-label {
+  font-weight: 500;
+}
+
+.back-to-home-btn {
+  margin: 1rem 2rem;
+  padding: 1rem;
+  background: rgba(255, 153, 0, 0.2);
+  border: 2px solid #ff9900;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  font-weight: 600;
+}
+
+.back-to-home-btn:hover {
+  background: #ff9900;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 153, 0, 0.4);
+}
+
+/* Mobile Bottom Bar */
+.admin-bottom-bar {
+  display: none;
+}
+
+/* Main Content */
+.admin-content {
+  flex: 1;
+  margin-left: 280px;
+  padding: 2rem;
+  min-height: 100vh;
+}
+
+/* Mobile Styles */
+@media (max-width: 968px) {
+  .admin-sidebar {
+    display: none;
+  }
+
+  .admin-content {
+    margin-left: 0;
+    margin-bottom: 80px;
+    padding: 1.5rem 1rem;
+  }
+
+  .admin-bottom-bar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #131921 0%, #232f3e 100%);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    padding: 0.75rem 0.5rem;
+    justify-content: space-around;
+  }
+
+  .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    flex: 1;
+    max-width: 80px;
+    position: relative;
+  }
+
+  .bottom-nav-item:hover {
+    color: #ff9900;
+    background: rgba(255, 153, 0, 0.1);
+  }
+
+  .bottom-nav-item.active {
+    color: #ff9900;
+  }
+
+  .bottom-nav-item.active::before {
+    content: '';
+    position: absolute;
+    top: -0.75rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 3px;
+    background: #ff9900;
+    border-radius: 0 0 3px 3px;
+  }
+
+  .bottom-nav-icon {
+    font-size: 1.5rem;
+  }
+
+  .bottom-nav-label {
+    font-size: 0.7rem;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .bottom-nav-label {
+    font-size: 0.65rem;
+  }
+
+  .bottom-nav-icon {
+    font-size: 1.3rem;
+  }
+}

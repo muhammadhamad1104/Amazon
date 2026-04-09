@@ -184,8 +184,25 @@
 
 .order-actions-section {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
   justify-content: center;
   padding-top: 1rem;
+}
+
+.cancel-order-note {
+  margin: 0;
+  font-weight: 600;
+  text-align: center;
+}
+
+.cancel-order-note.open {
+  color: #0f766e;
+}
+
+.cancel-order-note.blocked {
+  color: #b91c1c;
 }
 
 .cancel-order-btn {

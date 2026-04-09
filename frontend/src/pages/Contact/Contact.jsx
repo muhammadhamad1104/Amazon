@@ -55,7 +55,6 @@ const Contact = () => {
                   <FaEnvelope className="info-icon" />
                 </div>
                 <h3>Email Us</h3>
-                <p>support@irfwardrobe.com</p>
                 <p>irfwardrobe@gmail.com</p>
                 <p className="info-subtitle">We'll respond within 24 hours</p>
               </div>

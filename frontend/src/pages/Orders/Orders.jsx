@@ -36,10 +36,23 @@ const Orders = () => {
       'Pending': '#ffa500',
       'Processing': '#007bff',
       'Shipped': '#17a2b8',
+      'Received': '#28a745',
       'Delivered': '#28a745',
       'Cancelled': '#dc3545'
     };
     return colors[status] || '#6c757d';
+  };
+
+  const getPaymentStatus = (order) => (
+    order?.isPaid || order?.paymentResult?.status === 'Cleared' ? 'Cleared' : 'Pending'
+  );
+
+  const getPaymentStatusColor = (paymentStatus) => {
+    const colors = {
+      'Pending': '#f59e0b',
+      'Cleared': '#10b981'
+    };
+    return colors[paymentStatus] || '#6c757d';
   };
 
   if (loading) return <Loader />;
@@ -73,11 +86,19 @@ const Orders = () => {
                       })}
                     </p>
                   </div>
-                  <div 
-                    className="order-status"
-                    style={{ backgroundColor: getStatusColor(order.status) }}
-                  >
-                    {order.status}
+                  <div className="order-badges">
+                    <div
+                      className="order-status"
+                      style={{ backgroundColor: getStatusColor(order.status) }}
+                    >
+                      {order.status}
+                    </div>
+                    <div
+                      className="payment-status"
+                      style={{ backgroundColor: getPaymentStatusColor(getPaymentStatus(order)) }}
+                    >
+                      Payment: {getPaymentStatus(order)}
+                    </div>
                   </div>
                 </div>
 

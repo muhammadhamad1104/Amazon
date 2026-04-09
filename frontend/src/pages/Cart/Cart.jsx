@@ -7,6 +7,8 @@ import Loader from '../../components/Loader/Loader';
 import { toast } from 'react-toastify';
 import './Cart.css';
 
+const FIXED_SHIPPING_CHARGE = 200;
+
 const Cart = () => {
   const [loading, setLoading] = useState(true);
   const [pendingRemove, setPendingRemove] = useState(null);
@@ -92,8 +94,8 @@ const Cart = () => {
     acc + (item.product?.price || 0) * item.quantity, 0
   ) || 0;
 
-  const tax = subtotal * 0.15;
-  const shipping = subtotal > 100 ? 0 : 10;
+  const tax = 0;
+  const shipping = FIXED_SHIPPING_CHARGE;
   const total = subtotal + tax + shipping;
 
   return (
@@ -198,20 +200,14 @@ const Cart = () => {
               </div>
 
               <div className="summary-row">
-                <span>Tax (15%)</span>
+                <span>Tax (0%)</span>
                 <span>${tax.toFixed(2)}</span>
               </div>
 
               <div className="summary-row">
                 <span>Shipping</span>
-                <span>{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</span>
+                <span>${shipping.toFixed(2)}</span>
               </div>
-
-              {subtotal < 100 && (
-                <p className="free-shipping-notice">
-                  Add ${(100 - subtotal).toFixed(2)} more for FREE shipping!
-                </p>
-              )}
 
               <div className="summary-total">
                 <span>Total</span>

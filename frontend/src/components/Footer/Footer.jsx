@@ -29,7 +29,6 @@ const Footer = () => {
             <li><Link to="/about#shipping-info">Shipping Info</Link></li>
             <li><Link to="/contact">Contact Us</Link></li>
           </ul>
-          <p>support@irfwardrobe.com</p>
           <p>irfwardrobe@gmail.com</p>
           <p>+92 316 4928847</p>
         </div>

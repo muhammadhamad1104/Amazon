@@ -146,7 +146,7 @@ const About = () => {
           </div>
           <p className="mission-text">
             We offer a 7-day return window for eligible items in original condition. To request a return,
-            contact us with your order number at support@irfwardrobe.com.
+            contact us with your order number at irfwardrobe@gmail.com.
             Returns are reviewed within 24 hours.
           </p>
         </section>

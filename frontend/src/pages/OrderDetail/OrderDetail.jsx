@@ -6,6 +6,19 @@ import Loader from '../../components/Loader/Loader';
 import { toast } from 'react-toastify';
 import './OrderDetail.css';
 
+const CANCEL_WINDOW_HOURS = 24;
+const CANCEL_WINDOW_MS = CANCEL_WINDOW_HOURS * 60 * 60 * 1000;
+const NON_CANCELLABLE_STATUSES = new Set(['Shipped', 'Received', 'Delivered', 'Cancelled']);
+
+const formatDuration = (ms) => {
+  if (ms <= 0) return '0m';
+  const totalMinutes = Math.floor(ms / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours <= 0) return `${minutes}m`;
+  return `${hours}h ${minutes}m`;
+};
+
 const OrderDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -50,6 +63,7 @@ const OrderDetail = () => {
       'Pending': '#ffa500',
       'Processing': '#007bff',
       'Shipped': '#17a2b8',
+      'Received': '#28a745',
       'Delivered': '#28a745',
       'Cancelled': '#dc3545'
     };
@@ -59,7 +73,19 @@ const OrderDetail = () => {
   if (loading) return <Loader />;
   if (!order) return null;
 
-  const canCancel = order.status !== 'Shipped' && order.status !== 'Delivered' && order.status !== 'Cancelled';
+  const paymentStatus = order.isPaid || order?.paymentResult?.status === 'Cleared' ? 'Cleared' : 'Pending';
+  const subtotal = (order.items || []).reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+  const cancelWindowRemainingMs = (new Date(order.createdAt).getTime() + CANCEL_WINDOW_MS) - Date.now();
+  const cancellationWindowOpen = cancelWindowRemainingMs > 0;
+  const statusAllowsCancellation = !NON_CANCELLABLE_STATUSES.has(order.status);
+  const canCancel = statusAllowsCancellation && cancellationWindowOpen;
+
+  const cancelMessage = !statusAllowsCancellation
+    ? `Order cannot be cancelled after status ${order.status}.`
+    : cancellationWindowOpen
+      ? `You can cancel this order for ${formatDuration(cancelWindowRemainingMs)} more.`
+      : `Cancellation window expired. Orders can only be cancelled within ${CANCEL_WINDOW_HOURS} hours.`;
 
   return (
     <div className="order-detail-page">
@@ -100,11 +126,11 @@ const OrderDetail = () => {
               </div>
               <div className="info-item">
                 <span className="info-label">Payment Status:</span>
-                <span className={`info-value ${order.isPaid ? 'paid' : 'unpaid'}`}>
-                  {order.isPaid ? 'Paid' : 'Not Paid'}
+                <span className={`info-value ${paymentStatus === 'Cleared' ? 'paid' : 'unpaid'}`}>
+                  {paymentStatus}
                 </span>
               </div>
-              {order.isPaid && order.paidAt && (
+              {paymentStatus === 'Cleared' && order.paidAt && (
                 <div className="info-item">
                   <span className="info-label">Paid At:</span>
                   <span className="info-value">
@@ -155,15 +181,15 @@ const OrderDetail = () => {
             <div className="summary-details">
               <div className="summary-row">
                 <span>Subtotal:</span>
-                <span>${(order.totalPrice - order.taxPrice - order.shippingPrice).toFixed(2)}</span>
+                <span>${subtotal.toFixed(2)}</span>
               </div>
               <div className="summary-row">
-                <span>Tax:</span>
+                <span>Tax (0%):</span>
                 <span>${order.taxPrice.toFixed(2)}</span>
               </div>
               <div className="summary-row">
                 <span>Shipping:</span>
-                <span>{order.shippingPrice === 0 ? 'FREE' : `$${order.shippingPrice.toFixed(2)}`}</span>
+                <span>${order.shippingPrice.toFixed(2)}</span>
               </div>
               <div className="summary-total">
                 <span>Total:</span>
@@ -173,13 +199,14 @@ const OrderDetail = () => {
           </div>
 
           {/* Actions */}
-          {canCancel && (
-            <div className="order-actions-section">
+          <div className="order-actions-section">
+            <p className={`cancel-order-note ${canCancel ? 'open' : 'blocked'}`}>{cancelMessage}</p>
+            {canCancel && (
               <button onClick={handleCancelOrder} className="cancel-order-btn">
                 Cancel Order
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

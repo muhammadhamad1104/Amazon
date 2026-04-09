@@ -15,7 +15,7 @@ const CategorySidebar = () => {
     <div className="category-sidebar">
       <h3 className="sidebar-title">Categories</h3>
       <ul className="category-list">
-        {Object.entries(PRODUCT_CATEGORY_TREE).map(([category, subcategories]) => (
+        {Object.keys(PRODUCT_CATEGORY_TREE).map((category) => (
           <li key={category} className="category-item">
             <div className="category-heading">
               <span className="category-icon">{categoryIcons[category] || '🛍️'}</span>
@@ -26,20 +26,6 @@ const CategorySidebar = () => {
                 {category}
               </Link>
             </div>
-            {subcategories.length > 0 && (
-              <ul className="subcategory-list">
-                {subcategories.map((subcategory) => (
-                  <li key={subcategory}>
-                    <Link
-                      to={`/products?category=${encodeURIComponent(category)}&subcategory=${encodeURIComponent(subcategory)}`}
-                      className="subcategory-link"
-                    >
-                      {subcategory}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
           </li>
         ))}
       </ul>

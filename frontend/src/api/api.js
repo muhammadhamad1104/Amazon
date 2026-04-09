@@ -90,9 +90,11 @@ export const cartAPI = {
 export const ordersAPI = {
   create: (orderData) => api.post('/orders', orderData),
   getMyOrders: () => api.get('/orders/myorders'),
+  getAllForAdmin: () => api.get('/orders/admin/all'),
   getById: (id) => api.get(`/orders/${id}`),
   pay: (id, paymentData) => api.put(`/orders/${id}/pay`, paymentData),
-  cancel: (id) => api.put(`/orders/${id}/cancel`)
+  cancel: (id) => api.put(`/orders/${id}/cancel`),
+  updateAdminStatus: (id, payload) => api.put(`/orders/${id}/admin-status`, payload)
 };
 
 export const adminAPI = {

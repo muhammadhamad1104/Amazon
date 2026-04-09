@@ -27,6 +27,7 @@ const NotFound = lazy(() => import('./pages/NotFound/NotFound'));
 const AdminDashboard = lazy(() => import('./pages/Admin/AdminDashboard'));
 const DashboardOverview = lazy(() => import('./pages/Admin/DashboardOverview'));
 const ProductsManagement = lazy(() => import('./pages/Admin/ProductsManagement'));
+const OrdersManagement = lazy(() => import('./pages/Admin/OrdersManagement'));
 
 function AppContent() {
   const location = useLocation();
@@ -58,6 +59,7 @@ function AppContent() {
             <Route path="/admin" element={<AdminDashboard />}>
               <Route index element={<DashboardOverview />} />
               <Route path="products" element={<ProductsManagement />} />
+              <Route path="orders" element={<OrdersManagement />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />

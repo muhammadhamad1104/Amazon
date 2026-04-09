@@ -1,20 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Navigate, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/store';
-import { FaBox, FaChartBar, FaUser, FaSignOutAlt } from 'react-icons/fa';
+import { FaBox, FaChartBar, FaUser, FaSignOutAlt, FaClipboardList } from 'react-icons/fa';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
   const { user, isAuthenticated, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-
-  useEffect(() => {
-    // Close mobile sidebar when route changes
-    setIsMobileSidebarOpen(false);
-  }, [location.pathname]);
-
   // Debug logging
   useEffect(() => {
     console.log('Admin Dashboard - Auth Status:', {
@@ -38,12 +31,12 @@ const AdminDashboard = () => {
   const navItems = [
     { path: '/admin', icon: FaChartBar, label: 'Dashboard', exact: true },
     { path: '/admin/products', icon: FaBox, label: 'Products' },
+    { path: '/admin/orders', icon: FaClipboardList, label: 'Orders' },
     { path: '/profile', icon: FaUser, label: 'Profile' },
   ];
 
   const handleNavClick = (path) => {
     navigate(path);
-    setIsMobileSidebarOpen(false);
   };
 
   const handleLogout = () => {

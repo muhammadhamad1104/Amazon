@@ -97,6 +97,22 @@
   font-size: 0.85rem;
 }
 
+.order-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.payment-status {
+  padding: 0.4rem 0.9rem;
+  border-radius: 20px;
+  color: white;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
 .order-items {
   padding: 1.5rem;
   display: flex;
@@ -213,6 +229,11 @@
     flex-direction: column;
     gap: 1.5rem;
     align-items: stretch;
+  }
+
+  .order-badges {
+    width: 100%;
+    align-items: flex-start;
   }
 
   .order-summary {

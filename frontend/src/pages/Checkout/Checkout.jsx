@@ -6,6 +6,8 @@ import Loader from '../../components/Loader/Loader';
 import { toast } from 'react-toastify';
 import './Checkout.css';
 
+const FIXED_SHIPPING_CHARGE = 200;
+
 const Checkout = () => {
   const navigate = useNavigate();
   const { cart, clearCart } = useCartStore();
@@ -80,8 +82,8 @@ const Checkout = () => {
   const subtotal = cart?.items?.reduce((acc, item) => 
     acc + item.product.price * item.quantity, 0
   ) || 0;
-  const tax = subtotal * 0.15;
-  const shipping = subtotal > 100 ? 0 : 10;
+  const tax = 0;
+  const shipping = FIXED_SHIPPING_CHARGE;
   const total = subtotal + tax + shipping;
 
   return (
@@ -202,13 +204,13 @@ const Checkout = () => {
               </div>
 
               <div className="summary-row">
-                <span>Tax (15%)</span>
+                <span>Tax (0%)</span>
                 <span>${tax.toFixed(2)}</span>
               </div>
 
               <div className="summary-row">
                 <span>Shipping</span>
-                <span>{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</span>
+                <span>${shipping.toFixed(2)}</span>
               </div>
 
               <div className="summary-total">

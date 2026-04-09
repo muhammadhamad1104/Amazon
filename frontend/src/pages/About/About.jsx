@@ -1,7 +1,20 @@
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { FaCheckCircle, FaTruck, FaShieldAlt, FaHeadset, FaBolt, FaUsers, FaGlobe, FaHeart } from 'react-icons/fa';
 import './About.css';
 
 const About = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!location.hash) return;
+
+    const target = document.querySelector(location.hash);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [location.hash]);
+
   return (
     <div className="about-page">
       {/* Hero Section */}
@@ -124,6 +137,30 @@ const About = () => {
               <p>We strive for excellence in every aspect of our service</p>
             </div>
           </div>
+        </section>
+
+        <section className="about-section policy-section" id="returns-policy">
+          <div className="section-header">
+            <h2>Returns Policy</h2>
+            <div className="section-underline"></div>
+          </div>
+          <p className="mission-text">
+            We offer a 7-day return window for eligible items in original condition. To request a return,
+            contact us with your order number at support@irfwardrobe.com.
+            Returns are reviewed within 24 hours.
+          </p>
+        </section>
+
+        <section className="about-section policy-section" id="shipping-info">
+          <div className="section-header">
+            <h2>Shipping Information</h2>
+            <div className="section-underline"></div>
+          </div>
+          <p className="mission-text">
+            Orders are processed Monday to Saturday and dispatched as quickly as possible.
+            Delivery time varies by city, usually within 2 to 5 business days. For urgent inquiries,
+            call us at +92 316 4928847.
+          </p>
         </section>
 
         {/* Contact CTA */}

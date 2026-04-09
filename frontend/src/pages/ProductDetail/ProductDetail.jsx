@@ -5,6 +5,7 @@ import { useAuthStore, useCartStore } from '../../store/store';
 import { FaStar, FaStarHalfAlt, FaRegStar, FaShoppingCart } from 'react-icons/fa';
 import Loader from '../../components/Loader/Loader';
 import { toast } from 'react-toastify';
+import { formatCategoryLabel } from '../../constants/productCategories';
 import './ProductDetail.css';
 
 const ProductDetail = () => {
@@ -157,7 +158,7 @@ const ProductDetail = () => {
           </div>
 
           <div className="product-meta">
-            <p><strong>Category:</strong> {product.category}</p>
+            <p><strong>Category:</strong> {formatCategoryLabel(product.category, product.subcategory)}</p>
           </div>
 
           {product.stock > 0 && (

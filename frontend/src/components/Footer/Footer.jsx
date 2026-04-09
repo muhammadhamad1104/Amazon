@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { FaFacebook, FaTwitter, FaInstagram, FaYoutube, FaHeart } from 'react-icons/fa';
+import { FaFacebook, FaTwitter, FaInstagram, FaYoutube } from 'react-icons/fa';
 import './Footer.css';
 
 const Footer = () => {
@@ -24,11 +24,14 @@ const Footer = () => {
         <div className="footer-section">
           <h3>Customer Service</h3>
           <ul>
-            <li><a href="#help">Help Center</a></li>
-            <li><a href="#returns">Returns</a></li>
-            <li><a href="#shipping">Shipping Info</a></li>
-            <li><a href="#contact">Contact Us</a></li>
+            <li><Link to="/contact">Help Center</Link></li>
+            <li><Link to="/about#returns-policy">Returns</Link></li>
+            <li><Link to="/about#shipping-info">Shipping Info</Link></li>
+            <li><Link to="/contact">Contact Us</Link></li>
           </ul>
+          <p>support@irfwardrobe.com</p>
+          <p>irfwardrobe@gmail.com</p>
+          <p>+92 316 4928847</p>
         </div>
 
         <div className="footer-section">
@@ -51,7 +54,7 @@ const Footer = () => {
       </div>
 
       <div className="footer-bottom">
-        <p>Made with <FaHeart className="heart-icon" /> © 2025 IRFWARDROBE. All rights reserved.</p>
+        <p>Made with © 2025 IRFWARDROBE. All rights reserved.</p>
       </div>
     </footer>
   );

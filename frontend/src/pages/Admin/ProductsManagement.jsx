@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { FaPlus, FaEdit, FaTrash, FaSearch } from 'react-icons/fa';
 import Loader from '../../components/Loader/Loader';
 import ProductFormModal from './ProductFormModal';
+import { formatCategoryLabel } from '../../constants/productCategories';
 import './ProductsManagement.css';
 
 const ProductsManagement = () => {
@@ -28,6 +29,7 @@ const ProductsManagement = () => {
       const filtered = products.filter(product =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product.subcategory || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.brand.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredProducts(filtered);
@@ -142,7 +144,7 @@ const ProductsManagement = () => {
           <FaSearch className="search-icon" />
           <input
             type="text"
-            placeholder="Search products by name, category, or brand..."
+            placeholder="Search products by name, category, subcategory, or brand..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
@@ -190,7 +192,7 @@ const ProductsManagement = () => {
                   </td>
                   <td>{product.brand}</td>
                   <td>
-                    <span className="category-tag">{product.category}</span>
+                    <span className="category-tag">{formatCategoryLabel(product.category, product.subcategory)}</span>
                   </td>
                   <td className="price-cell">${product.price.toFixed(2)}</td>
                   <td>

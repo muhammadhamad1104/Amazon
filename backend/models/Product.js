@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { CATEGORY_NAMES, isValidSubcategory } from '../config/productCategories.js';
 
 const productSchema = new mongoose.Schema({
   name: {
@@ -18,7 +19,18 @@ const productSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ['Electronics', 'Clothing', 'Books', 'Home & Kitchen', 'Sports', 'Toys', 'Beauty', 'Automotive', 'Health', 'Other']
+    enum: CATEGORY_NAMES
+  },
+  subcategory: {
+    type: String,
+    default: '',
+    trim: true,
+    validate: {
+      validator: function(subcategory) {
+        return isValidSubcategory(this.category, (subcategory || '').trim());
+      },
+      message: 'Invalid subcategory for selected category'
+    }
   },
   brand: {
     type: String,

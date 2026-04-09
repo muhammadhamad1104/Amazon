@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FaEnvelope, FaPhone, FaMapMarkerAlt, FaClock, FaPaperPlane, FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import { contactAPI } from '../../api/api';
 import './Contact.css';
 
 const Contact = () => {
@@ -20,13 +21,16 @@ const Contact = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    // Simulate API call - reduced delay for better UX
-    setTimeout(() => {
+
+    try {
+      await contactAPI.sendMessage(formData);
       toast.success('Thank you for contacting us! We will get back to you soon.');
       setFormData({ name: '', email: '', subject: '', message: '' });
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to send message. Please try again.');
+    } finally {
       setIsSubmitting(false);
-    }, 500);
+    }
   };
 
   return (
@@ -52,6 +56,7 @@ const Contact = () => {
                 </div>
                 <h3>Email Us</h3>
                 <p>support@irfwardrobe.com</p>
+                <p>irfwardrobe@gmail.com</p>
                 <p className="info-subtitle">We'll respond within 24 hours</p>
               </div>
               
@@ -60,7 +65,7 @@ const Contact = () => {
                   <FaPhone className="info-icon" />
                 </div>
                 <h3>Call Us</h3>
-                <p>+92 300 1234567</p>
+                <p>+92 316 4928847</p>
                 <p className="info-subtitle">Mon-Sat, 9:00 AM - 6:00 PM</p>
               </div>
               
@@ -134,7 +139,7 @@ const Contact = () => {
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    placeholder="john@example.com"
+                    placeholder="irfwardrobe@gmail.com"
                   />
                 </div>
               </div>

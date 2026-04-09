@@ -1,31 +1,45 @@
 import { Link } from 'react-router-dom';
+import { PRODUCT_CATEGORY_TREE } from '../../constants/productCategories';
 import './CategorySidebar.css';
 
 const CategorySidebar = () => {
-  const categories = [
-    { name: 'Electronics', icon: '💻', path: '/products?category=Electronics' },
-    { name: 'Clothing', icon: '👕', path: '/products?category=Clothing' },
-    { name: 'Books', icon: '📚', path: '/products?category=Books' },
-    { name: 'Home & Kitchen', icon: '🏠', path: '/products?category=Home & Kitchen' },
-    { name: 'Sports', icon: '⚽', path: '/products?category=Sports' },
-    { name: 'Toys', icon: '🧸', path: '/products?category=Toys' },
-    { name: 'Beauty', icon: '💄', path: '/products?category=Beauty' },
-    { name: 'Automotive', icon: '🚗', path: '/products?category=Automotive' },
-    { name: 'Health', icon: '🏥', path: '/products?category=Health' },
-    { name: 'Other', icon: '🛍️', path: '/products?category=Other' }
-  ];
+  const categoryIcons = {
+    "Women's Unstitched Collection": '👗',
+    'Kids wear': '🧒',
+    'Thrifted pre-loved shoes': '👟',
+    Accessories: '👜',
+    Beauty: '💄'
+  };
 
   return (
     <div className="category-sidebar">
       <h3 className="sidebar-title">Categories</h3>
       <ul className="category-list">
-        {categories.map((category, index) => (
-          <li key={index} className="category-item">
-            <Link to={category.path} className="category-link">
-              <span className="category-icon">{category.icon}</span>
-              <span className="category-name">{category.name}</span>
-              <span className="category-arrow">›</span>
-            </Link>
+        {Object.entries(PRODUCT_CATEGORY_TREE).map(([category, subcategories]) => (
+          <li key={category} className="category-item">
+            <div className="category-heading">
+              <span className="category-icon">{categoryIcons[category] || '🛍️'}</span>
+              <Link
+                to={`/products?category=${encodeURIComponent(category)}`}
+                className="category-name-link"
+              >
+                {category}
+              </Link>
+            </div>
+            {subcategories.length > 0 && (
+              <ul className="subcategory-list">
+                {subcategories.map((subcategory) => (
+                  <li key={subcategory}>
+                    <Link
+                      to={`/products?category=${encodeURIComponent(category)}&subcategory=${encodeURIComponent(subcategory)}`}
+                      className="subcategory-link"
+                    >
+                      {subcategory}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </li>
         ))}
       </ul>

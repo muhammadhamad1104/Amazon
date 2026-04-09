@@ -10,6 +10,7 @@ import productRoutes from './routes/products.js';
 import cartRoutes from './routes/cart.js';
 import orderRoutes from './routes/orders.js';
 import adminRoutes from './routes/admin.js';
+import contactRoutes from './routes/contact.js';
 
 dotenv.config();
 
@@ -30,6 +31,11 @@ const hasFrontendBuild = Boolean(frontendDistPath);
 const frontendIndexPath = hasFrontendBuild
   ? path.join(frontendDistPath, 'index.html')
   : null;
+const uploadsPath = path.resolve(__dirname, './uploads');
+
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath, { recursive: true });
+}
 
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
@@ -54,6 +60,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use('/uploads', express.static(uploadsPath));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -61,6 +68,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/contact', contactRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

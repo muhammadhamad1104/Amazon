@@ -84,8 +84,8 @@ const Header = () => {
     <header className="header">
       <div className="header-container">
         <Link to="/" className="logo">
-          <span className="logo-icon">📦</span>
-          <span className="logo-text">IRFWARDROBE</span>
+          <img src="/logo2.jpeg" alt="IRFWARDROBE logo" className="logo-image" />
+          <span className="logo-text">IRF WARDROBE</span>
         </Link>
 
         <form className="search-bar" onSubmit={handleSearch}>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { adminAPI } from '../../api/api';
 import { FaBox, FaShoppingCart, FaDollarSign, FaUsers } from 'react-icons/fa';
 import Loader from '../../components/Loader/Loader';
+import { formatCategoryLabel } from '../../constants/productCategories';
 import './DashboardOverview.css';
 
 const DashboardOverview = () => {
@@ -104,7 +105,7 @@ const DashboardOverview = () => {
                     <img src={product.image} alt={product.name} className="product-thumb" />
                   </td>
                   <td>{product.name}</td>
-                  <td><span className="category-badge">{product.category}</span></td>
+                  <td><span className="category-badge">{formatCategoryLabel(product.category, product.subcategory)}</span></td>
                   <td className="price-cell">${product.price.toFixed(2)}</td>
                   <td>
                     <span className={`stock-badge ${product.stock > 10 ? 'in-stock' : 'low-stock'}`}>

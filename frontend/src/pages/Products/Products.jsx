@@ -5,6 +5,7 @@ import ProductCard from '../../components/ProductCard/ProductCard';
 import Loader from '../../components/Loader/Loader';
 import { toast } from 'react-toastify';
 import { FaFilter } from 'react-icons/fa';
+import { PRODUCT_CATEGORY_OPTIONS, getSubcategoryOptions } from '../../constants/productCategories';
 import './Products.css';
 
 const Products = () => {
@@ -19,13 +20,17 @@ const Products = () => {
 
   const [filters, setFilters] = useState({
     category: searchParams.get('category') || 'All',
+    subcategory: searchParams.get('subcategory') || 'All',
     search: searchParams.get('search') || '',
     sort: 'newest',
     minPrice: '',
     maxPrice: ''
   });
 
-  const categories = ['All', 'Electronics', 'Clothing', 'Books', 'Home & Kitchen', 'Sports', 'Toys', 'Beauty', 'Other'];
+  const categories = ['All', ...PRODUCT_CATEGORY_OPTIONS];
+  const subcategoryOptions = filters.category !== 'All'
+    ? ['All', ...getSubcategoryOptions(filters.category)]
+    : ['All'];
 
   useEffect(() => {
     fetchProducts();
@@ -69,6 +74,7 @@ const Products = () => {
     try {
       const params = {};
       if (filters.category !== 'All') params.category = filters.category;
+      if (filters.subcategory !== 'All') params.subcategory = filters.subcategory;
       if (filters.search) params.search = filters.search;
       if (filters.sort) params.sort = filters.sort;
       if (filters.minPrice) params.minPrice = filters.minPrice;
@@ -85,12 +91,18 @@ const Products = () => {
   };
 
   const handleFilterChange = (key, value) => {
+    if (key === 'category') {
+      setFilters((prev) => ({ ...prev, category: value, subcategory: 'All' }));
+      return;
+    }
+
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
   const resetFilters = () => {
     setFilters({
       category: 'All',
+      subcategory: 'All',
       search: '',
       sort: 'newest',
       minPrice: '',
@@ -130,6 +142,20 @@ const Products = () => {
             >
               {categories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <h4>Subcategory</h4>
+            <select
+              value={filters.subcategory}
+              onChange={(e) => handleFilterChange('subcategory', e.target.value)}
+              className="filter-select"
+              disabled={filters.category === 'All' || subcategoryOptions.length === 1}
+            >
+              {subcategoryOptions.map((subcat) => (
+                <option key={subcat} value={subcat}>{subcat}</option>
               ))}
             </select>
           </div>

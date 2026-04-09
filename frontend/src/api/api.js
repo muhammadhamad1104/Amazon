@@ -70,8 +70,12 @@ export const productsAPI = {
   getFeatured: () => api.get('/products/featured'),
   getById: (id) => api.get(`/products/${id}`),
   addReview: (id, review) => api.post(`/products/${id}/reviews`, review),
-  create: (productData) => api.post('/products', productData),
-  update: (id, productData) => api.put(`/products/${id}`, productData),
+  create: (productData) => api.post('/products', productData, productData instanceof FormData
+    ? { headers: { 'Content-Type': 'multipart/form-data' } }
+    : undefined),
+  update: (id, productData) => api.put(`/products/${id}`, productData, productData instanceof FormData
+    ? { headers: { 'Content-Type': 'multipart/form-data' } }
+    : undefined),
   delete: (id) => api.delete(`/products/${id}`)
 };
 
@@ -93,6 +97,10 @@ export const ordersAPI = {
 
 export const adminAPI = {
   getStats: () => api.get('/admin/stats')
+};
+
+export const contactAPI = {
+  sendMessage: (payload) => api.post('/contact', payload)
 };
 
 export default api;

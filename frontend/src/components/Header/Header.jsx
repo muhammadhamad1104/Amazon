@@ -191,7 +191,7 @@ const Header = () => {
                     <div className="cart-dropdown-footer">
                       <div className="cart-total">
                         <span>Subtotal:</span>
-                          <span className="total-price">{formatPKR(cart.totalPrice)}</span>
+                        <span className="total-price">{formatPKR(cart.totalPrice)}</span>
                       </div>
                       <Link 
                         to="/cart" 

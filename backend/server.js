@@ -100,6 +100,18 @@ app.use((err, req, res, next) => {
   res.status(statusCode).json({ message: err.message || 'Internal server error' });
 });
 
+const getDbNameFromUri = (uri) => {
+  if (!uri) return '';
+
+  try {
+    const parsed = new URL(uri);
+    return decodeURIComponent(parsed.pathname.replace(/^\//, '')).trim();
+  } catch {
+    const uriWithoutQuery = uri.split('?')[0] || '';
+    return decodeURIComponent(uriWithoutQuery.substring(uriWithoutQuery.lastIndexOf('/') + 1)).trim();
+  }
+};
+
 // MongoDB Connection
 const connectDB = async () => {
   try {
@@ -110,15 +122,24 @@ const connectDB = async () => {
     if (!mongoURI) {
       throw new Error('MongoDB URI is not configured in environment variables');
     }
-    
-    await mongoose.connect(mongoURI);
+
+    const normalizedDbName = (
+      process.env.MONGODB_DB_NAME?.trim() ||
+      getDbNameFromUri(mongoURI) ||
+      'irfwardrobe'
+    ).toLowerCase();
+
+    await mongoose.connect(mongoURI, {
+      dbName: normalizedDbName
+    });
+
     const connectionSource = process.env.MONGODB_URI
       ? 'MONGODB_URI'
       : process.env.USE_REMOTE === 'true'
         ? 'Remote'
         : 'Local';
 
-    console.log(`MongoDB Connected Successfully (${connectionSource})`);
+    console.log(`MongoDB Connected Successfully (${connectionSource}, db: ${normalizedDbName})`);
   } catch (error) {
     console.error('MongoDB Connection Error:', error.message);
     process.exit(1);

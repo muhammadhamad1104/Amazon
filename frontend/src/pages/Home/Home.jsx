@@ -70,7 +70,7 @@ const Home = () => {
             <div className="feature-card">
               <span className="feature-icon">🚚</span>
               <h3>Flat Shipping</h3>
-              <p>$200 shipping on every order</p>
+              <p>PKR 200 shipping on every order</p>
             </div>
             <div className="feature-card">
               <span className="feature-icon">🔒</span>

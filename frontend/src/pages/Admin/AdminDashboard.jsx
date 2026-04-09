@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Navigate, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/store';
 import { FaBox, FaChartBar, FaUser, FaSignOutAlt, FaClipboardList } from 'react-icons/fa';
+import { resolveImageUrl } from '../../utils/media';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
@@ -51,7 +52,7 @@ const AdminDashboard = () => {
         <div className="sidebar-header">
           <div className="sidebar-avatar">
             {user?.avatar ? (
-              <img src={user.avatar} alt="Admin avatar" />
+              <img src={resolveImageUrl(user.avatar)} alt="Admin avatar" />
             ) : (
               <div className="avatar-fallback">{user?.name?.[0] || 'A'}</div>
             )}

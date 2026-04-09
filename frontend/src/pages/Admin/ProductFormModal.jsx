@@ -5,6 +5,7 @@ import {
   PRODUCT_CATEGORY_OPTIONS,
   getSubcategoryOptions
 } from '../../constants/productCategories';
+import { resolveImageUrl } from '../../utils/media';
 import './ProductFormModal.css';
 
 const ProductFormModal = ({ product, onSave, onClose }) => {
@@ -212,7 +213,7 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
 
           <div className="form-row">
             <div className="form-field">
-              <label htmlFor="price">Price ($) *</label>
+              <label htmlFor="price">Price (PKR) *</label>
               <input
                 type="number"
                 id="price"
@@ -326,7 +327,7 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
 
             {(formData.image || filePreview || product?.image) && (
               <div className="image-preview">
-                <img src={filePreview || formData.image || product?.image} alt="Preview" />
+                <img src={resolveImageUrl(filePreview || formData.image || product?.image)} alt="Preview" />
               </div>
             )}
           </div>

@@ -4,6 +4,8 @@ import { ordersAPI } from '../../api/api';
 import { useAuthStore } from '../../store/store';
 import Loader from '../../components/Loader/Loader';
 import { toast } from 'react-toastify';
+import { formatPKR } from '../../utils/currency';
+import { resolveImageUrl } from '../../utils/media';
 import './Orders.css';
 
 const Orders = () => {
@@ -105,11 +107,11 @@ const Orders = () => {
                 <div className="order-items">
                   {order.items.map((item, index) => (
                     <div key={index} className="order-item">
-                      <img src={item.image} alt={item.name} />
+                      <img src={resolveImageUrl(item.image)} alt={item.name} />
                       <div className="order-item-details">
                         <h4>{item.name}</h4>
                         <p>Quantity: {item.quantity}</p>
-                        <p className="item-price">${item.price.toFixed(2)} each</p>
+                        <p className="item-price">{formatPKR(item.price)} each</p>
                       </div>
                     </div>
                   ))}
@@ -123,7 +125,7 @@ const Orders = () => {
                     </div>
                     <div className="summary-item">
                       <span>Total Amount:</span>
-                      <strong className="total-price">${order.totalPrice.toFixed(2)}</strong>
+                      <strong className="total-price">{formatPKR(order.totalPrice)}</strong>
                     </div>
                   </div>
 

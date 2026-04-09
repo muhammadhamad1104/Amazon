@@ -5,6 +5,8 @@ import { FaPlus, FaEdit, FaTrash, FaSearch } from 'react-icons/fa';
 import Loader from '../../components/Loader/Loader';
 import ProductFormModal from './ProductFormModal';
 import { formatCategoryLabel } from '../../constants/productCategories';
+import { formatPKR } from '../../utils/currency';
+import { resolveImageUrl } from '../../utils/media';
 import './ProductsManagement.css';
 
 const ProductsManagement = () => {
@@ -183,7 +185,7 @@ const ProductsManagement = () => {
                   ref={isLastProduct ? lastProductRef : null}
                 >
                   <td>
-                    <img src={product.image} alt={product.name} className="product-image" />
+                    <img src={resolveImageUrl(product.image)} alt={product.name} className="product-image" />
                   </td>
                   <td>
                     <div className="product-name-cell">
@@ -194,7 +196,7 @@ const ProductsManagement = () => {
                   <td>
                     <span className="category-tag">{formatCategoryLabel(product.category, product.subcategory)}</span>
                   </td>
-                  <td className="price-cell">${product.price.toFixed(2)}</td>
+                  <td className="price-cell">{formatPKR(product.price)}</td>
                   <td>
                     <span className={`stock-tag ${product.stock > 10 ? 'high' : product.stock > 0 ? 'low' : 'out'}`}>
                       {product.stock} units

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { adminAPI } from '../../api/api';
-import { FaBox, FaShoppingCart, FaDollarSign, FaUsers } from 'react-icons/fa';
+import { FaBox, FaShoppingCart, FaMoneyBillWave, FaUsers } from 'react-icons/fa';
 import Loader from '../../components/Loader/Loader';
 import { formatCategoryLabel } from '../../constants/productCategories';
+import { formatPKR } from '../../utils/currency';
+import { resolveImageUrl } from '../../utils/media';
 import './DashboardOverview.css';
 
 const DashboardOverview = () => {
@@ -64,11 +66,11 @@ const DashboardOverview = () => {
 
         <div className="stat-card revenue">
           <div className="stat-icon-wrapper">
-            <FaDollarSign className="stat-icon" />
+            <FaMoneyBillWave className="stat-icon" />
           </div>
           <div className="stat-info">
             <h3>Total Revenue</h3>
-            <p className="stat-number">${stats.totalRevenue.toFixed(2)}</p>
+            <p className="stat-number">{formatPKR(stats.totalRevenue)}</p>
           </div>
         </div>
 
@@ -102,11 +104,11 @@ const DashboardOverview = () => {
               {stats.recentProducts.map((product) => (
                 <tr key={product._id}>
                   <td>
-                    <img src={product.image} alt={product.name} className="product-thumb" />
+                    <img src={resolveImageUrl(product.image)} alt={product.name} className="product-thumb" />
                   </td>
                   <td>{product.name}</td>
                   <td><span className="category-badge">{formatCategoryLabel(product.category, product.subcategory)}</span></td>
-                  <td className="price-cell">${product.price.toFixed(2)}</td>
+                  <td className="price-cell">{formatPKR(product.price)}</td>
                   <td>
                     <span className={`stock-badge ${product.stock > 10 ? 'in-stock' : 'low-stock'}`}>
                       {product.stock} units

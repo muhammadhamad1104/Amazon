@@ -4,6 +4,8 @@ import { useAuthStore, useCartStore } from '../../store/store';
 import { useState, useEffect } from 'react';
 import { cartAPI } from '../../api/api';
 import { toast } from 'react-toastify';
+import { formatPKR } from '../../utils/currency';
+import { resolveImageUrl } from '../../utils/media';
 import './Header.css';
 
 const Header = () => {
@@ -16,11 +18,7 @@ const Header = () => {
   const [showCartDropdown, setShowCartDropdown] = useState(false);
   const [pendingRemoveId, setPendingRemoveId] = useState(null);
   const isAdmin = isAuthenticated && user?.isAdmin;
-  
-  // Hide header on admin pages
-  if (location.pathname.startsWith('/admin')) {
-    return null;
-  }
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -79,6 +77,11 @@ const Header = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Hide header on admin pages
+  if (isAdminRoute) {
+    return null;
+  }
 
   return (
     <header className="header">
@@ -168,11 +171,11 @@ const Header = () => {
                     <div className="cart-dropdown-items">
                       {cart.items.map((item) => (
                         <div key={item.product._id} className="cart-dropdown-item">
-                          <img src={item.product.image} alt={item.product.name} />
+                          <img src={resolveImageUrl(item.product.image)} alt={item.product.name} />
                           <div className="cart-item-info">
                             <h4>{item.product.name}</h4>
                             <p className="cart-item-price">
-                              ${item.product.price} × {item.quantity}
+                              {formatPKR(item.product.price)} × {item.quantity}
                             </p>
                           </div>
                           <button
@@ -188,7 +191,7 @@ const Header = () => {
                     <div className="cart-dropdown-footer">
                       <div className="cart-total">
                         <span>Subtotal:</span>
-                        <span className="total-price">${cart.totalPrice?.toFixed(2)}</span>
+                          <span className="total-price">{formatPKR(cart.totalPrice)}</span>
                       </div>
                       <Link 
                         to="/cart" 
@@ -247,7 +250,7 @@ const Header = () => {
                 <button className="nav-link user-btn">
                   {user?.avatar ? (
                     <span className="user-avatar">
-                      <img src={user.avatar} alt="Profile" />
+                      <img src={resolveImageUrl(user.avatar)} alt="Profile" />
                     </span>
                   ) : (
                     <FaUser />

@@ -35,7 +35,7 @@ const parseBoolean = (value) => {
 
 const buildUploadedImageUrl = (req, file) => {
   if (!file) return '';
-  return `${req.protocol}://${req.get('host')}/uploads/${file.filename}`;
+  return `/uploads/${file.filename}`;
 };
 
 const normalizeProductPayload = (req) => {

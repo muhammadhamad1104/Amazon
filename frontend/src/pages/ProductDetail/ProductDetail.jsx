@@ -6,6 +6,8 @@ import { FaStar, FaStarHalfAlt, FaRegStar, FaShoppingCart } from 'react-icons/fa
 import Loader from '../../components/Loader/Loader';
 import { toast } from 'react-toastify';
 import { formatCategoryLabel } from '../../constants/productCategories';
+import { formatPKR } from '../../utils/currency';
+import { resolveImageUrl } from '../../utils/media';
 import './ProductDetail.css';
 
 const ProductDetail = () => {
@@ -94,9 +96,11 @@ const ProductDetail = () => {
   if (loading) return <Loader />;
   if (!product) return null;
 
-  const images = product.images && product.images.length > 0 
-    ? product.images 
-    : [product.image];
+  const images = (product.images && product.images.length > 0
+    ? product.images
+    : [product.image])
+    .map((image) => resolveImageUrl(image))
+    .filter(Boolean);
 
   return (
     <div className="product-detail-page">
@@ -104,7 +108,7 @@ const ProductDetail = () => {
         {/* Product Images */}
         <div className="product-images">
           <div className="main-image">
-            <img src={images[selectedImage]} alt={product.name} />
+            <img src={images[selectedImage] || resolveImageUrl(product.image)} alt={product.name} />
           </div>
           {images.length > 1 && (
             <div className="thumbnail-images">
@@ -134,7 +138,7 @@ const ProductDetail = () => {
           </div>
 
           <div className="price-section">
-            <span className="price">${product.price.toFixed(2)}</span>
+            <span className="price">{formatPKR(product.price)}</span>
           </div>
 
           <div className="stock-info">

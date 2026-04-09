@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
+import { formatPKR } from '../../utils/currency';
+import { resolveImageUrl } from '../../utils/media';
 import './ProductCard.css';
 
 const ProductCard = ({ product }) => {
@@ -24,7 +26,7 @@ const ProductCard = ({ product }) => {
   return (
     <Link to={`/product/${product._id}`} className="product-card">
       <div className="product-image-container">
-        <img src={product.image} alt={product.name} className="product-image" />
+        <img src={resolveImageUrl(product.image)} alt={product.name} className="product-image" />
         {product.stock === 0 && <div className="out-of-stock-badge">Out of Stock</div>}
         {product.featured && <div className="featured-badge">Featured</div>}
       </div>
@@ -39,7 +41,7 @@ const ProductCard = ({ product }) => {
         </div>
         
         <div className="product-footer">
-          <span className="product-price">${product.price.toFixed(2)}</span>
+          <span className="product-price">{formatPKR(product.price)}</span>
           {product.stock > 0 && product.stock < 10 && (
             <span className="low-stock">Only {product.stock} left</span>
           )}

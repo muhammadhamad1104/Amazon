@@ -5,6 +5,8 @@ import { useCartStore, useAuthStore } from '../../store/store';
 import { FaTrash, FaMinus, FaPlus } from 'react-icons/fa';
 import Loader from '../../components/Loader/Loader';
 import { toast } from 'react-toastify';
+import { formatPKR } from '../../utils/currency';
+import { resolveImageUrl } from '../../utils/media';
 import './Cart.css';
 
 const FIXED_SHIPPING_CHARGE = 200;
@@ -130,7 +132,7 @@ const Cart = () => {
                 <div key={item.product?._id} className="cart-item">
                   <div className="item-product">
                     <Link to={`/product/${item.product?._id}`}>
-                      <img src={item.product?.image} alt={item.product?.name} />
+                      <img src={resolveImageUrl(item.product?.image)} alt={item.product?.name} />
                     </Link>
                     <div className="item-info">
                       <Link to={`/product/${item.product?._id}`} className="item-name">
@@ -144,7 +146,7 @@ const Cart = () => {
                   </div>
 
                   <div className="item-price">
-                    ${item.product?.price?.toFixed(2)}
+                    {formatPKR(item.product?.price)}
                   </div>
 
                   <div className="item-quantity">
@@ -166,7 +168,7 @@ const Cart = () => {
                   </div>
 
                   <div className="item-total">
-                    ${((item.product?.price || 0) * item.quantity).toFixed(2)}
+                    {formatPKR((item.product?.price || 0) * item.quantity)}
                   </div>
 
                   <div className="item-action">
@@ -196,22 +198,22 @@ const Cart = () => {
               
               <div className="summary-row">
                 <span>Subtotal ({cart.items.length} items)</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>{formatPKR(subtotal)}</span>
               </div>
 
               <div className="summary-row">
                 <span>Tax (0%)</span>
-                <span>${tax.toFixed(2)}</span>
+                <span>{formatPKR(tax)}</span>
               </div>
 
               <div className="summary-row">
                 <span>Shipping</span>
-                <span>${shipping.toFixed(2)}</span>
+                <span>{formatPKR(shipping)}</span>
               </div>
 
               <div className="summary-total">
                 <span>Total</span>
-                <span>${total.toFixed(2)}</span>
+                <span>{formatPKR(total)}</span>
               </div>
 
               <button 

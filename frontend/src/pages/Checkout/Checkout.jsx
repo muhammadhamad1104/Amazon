@@ -4,6 +4,8 @@ import { cartAPI, ordersAPI } from '../../api/api';
 import { useCartStore, useAuthStore } from '../../store/store';
 import Loader from '../../components/Loader/Loader';
 import { toast } from 'react-toastify';
+import { formatPKR } from '../../utils/currency';
+import { resolveImageUrl } from '../../utils/media';
 import './Checkout.css';
 
 const FIXED_SHIPPING_CHARGE = 200;
@@ -179,13 +181,13 @@ const Checkout = () => {
               <div className="order-items">
                 {cart?.items?.map(item => (
                   <div key={item.product._id} className="order-item">
-                    <img src={item.product.image} alt={item.product.name} />
+                    <img src={resolveImageUrl(item.product.image)} alt={item.product.name} />
                     <div className="order-item-info">
                       <h3>{item.product.name}</h3>
                       <p>Quantity: {item.quantity}</p>
                     </div>
                     <div className="order-item-price">
-                      ${(item.product.price * item.quantity).toFixed(2)}
+                      {formatPKR(item.product.price * item.quantity)}
                     </div>
                   </div>
                 ))}
@@ -200,22 +202,22 @@ const Checkout = () => {
               
               <div className="summary-row">
                 <span>Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>{formatPKR(subtotal)}</span>
               </div>
 
               <div className="summary-row">
                 <span>Tax (0%)</span>
-                <span>${tax.toFixed(2)}</span>
+                <span>{formatPKR(tax)}</span>
               </div>
 
               <div className="summary-row">
                 <span>Shipping</span>
-                <span>${shipping.toFixed(2)}</span>
+                <span>{formatPKR(shipping)}</span>
               </div>
 
               <div className="summary-total">
                 <span>Total</span>
-                <span>${total.toFixed(2)}</span>
+                <span>{formatPKR(total)}</span>
               </div>
 
               <button 

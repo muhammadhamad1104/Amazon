@@ -4,6 +4,8 @@ import { ordersAPI } from '../../api/api';
 import { useAuthStore } from '../../store/store';
 import Loader from '../../components/Loader/Loader';
 import { toast } from 'react-toastify';
+import { formatPKR } from '../../utils/currency';
+import { resolveImageUrl } from '../../utils/media';
 import './OrderDetail.css';
 
 const CANCEL_WINDOW_HOURS = 24;
@@ -161,14 +163,14 @@ const OrderDetail = () => {
             <div className="order-items-list">
               {order.items.map((item, index) => (
                 <div key={index} className="order-detail-item">
-                  <img src={item.image} alt={item.name} />
+                  <img src={resolveImageUrl(item.image)} alt={item.name} />
                   <div className="item-details">
                     <h3>{item.name}</h3>
                     <p>Quantity: {item.quantity}</p>
-                    <p className="item-price">${item.price.toFixed(2)} each</p>
+                    <p className="item-price">{formatPKR(item.price)} each</p>
                   </div>
                   <div className="item-total">
-                    ${(item.price * item.quantity).toFixed(2)}
+                    {formatPKR(item.price * item.quantity)}
                   </div>
                 </div>
               ))}
@@ -181,19 +183,19 @@ const OrderDetail = () => {
             <div className="summary-details">
               <div className="summary-row">
                 <span>Subtotal:</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>{formatPKR(subtotal)}</span>
               </div>
               <div className="summary-row">
                 <span>Tax (0%):</span>
-                <span>${order.taxPrice.toFixed(2)}</span>
+                <span>{formatPKR(order.taxPrice)}</span>
               </div>
               <div className="summary-row">
                 <span>Shipping:</span>
-                <span>${order.shippingPrice.toFixed(2)}</span>
+                <span>{formatPKR(order.shippingPrice)}</span>
               </div>
               <div className="summary-total">
                 <span>Total:</span>
-                <span>${order.totalPrice.toFixed(2)}</span>
+                <span>{formatPKR(order.totalPrice)}</span>
               </div>
             </div>
           </div>

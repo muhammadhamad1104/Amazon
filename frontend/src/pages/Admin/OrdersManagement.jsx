@@ -3,6 +3,7 @@ import { FaSync, FaSave } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import Loader from '../../components/Loader/Loader';
 import { ordersAPI } from '../../api/api';
+import { formatPKR } from '../../utils/currency';
 import './OrdersManagement.css';
 
 const ORDER_STATUS_OPTIONS = ['Pending', 'Processing', 'Shipped', 'Received', 'Delivered', 'Cancelled'];
@@ -176,7 +177,7 @@ const OrdersManagement = () => {
                     <div className="customer-email">{order.user?.email || 'No Email'}</div>
                   </td>
                   <td>{new Date(order.createdAt).toLocaleDateString('en-US')}</td>
-                  <td className="order-amount">${Number(order.totalPrice || 0).toFixed(2)}</td>
+                  <td className="order-amount">{formatPKR(order.totalPrice)}</td>
                   <td>{order.items?.length || 0}</td>
                   <td>
                     <span className={`order-pill ${getOrderStatusClass(order.status)}`}>

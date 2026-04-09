@@ -5,6 +5,7 @@ import { useAuthStore } from '../../store/store';
 import Loader from '../../components/Loader/Loader';
 import { toast } from 'react-toastify';
 import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaArrowLeft, FaCamera } from 'react-icons/fa';
+import { resolveImageUrl } from '../../utils/media';
 import './Profile.css';
 
 const Profile = () => {
@@ -170,7 +171,7 @@ const Profile = () => {
         <div className="profile-header">
           <div className="profile-avatar">
             {avatarPreview ? (
-              <img src={avatarPreview} alt="Profile" />
+              <img src={resolveImageUrl(avatarPreview)} alt="Profile" />
             ) : (
               <FaUser />
             )}

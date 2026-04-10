@@ -4,6 +4,7 @@ import Order from '../models/Order.js';
 import Cart from '../models/Cart.js';
 import Product from '../models/Product.js';
 import { protect, admin } from '../middleware/auth.js';
+import { getSmtpTransportConfig } from '../utils/smtpConfig.js';
 import {
   getSizeStockForProduct,
   normalizeSizeLabel,
@@ -53,15 +54,7 @@ const hasMailConfig = () => (
   process.env.SMTP_PASS
 );
 
-const createTransporter = () => nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT || 587),
-  secure: String(process.env.SMTP_SECURE || 'false').toLowerCase() === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  }
-});
+const createTransporter = () => nodemailer.createTransport(getSmtpTransportConfig());
 
 const buildItemsHtml = (items = []) => items.map((item) => (
   `<li>${item.name} - Size: ${getDisplaySize(item.size)} - Qty: ${item.quantity} - Rs ${Number(item.price || 0).toFixed(2)} each</li>`

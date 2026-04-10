@@ -1,18 +1,10 @@
-import fs from 'fs';
-import path from 'path';
 import multer from 'multer';
-import { fileURLToPath } from 'url';
+import { ensureUploadsStorageReady, uploadsPath } from '../utils/uploadsPath.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const uploadsDir = path.resolve(__dirname, '../uploads');
-
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+ensureUploadsStorageReady();
 
 const storage = multer.diskStorage({
-  destination: (_, __, cb) => cb(null, uploadsDir),
+  destination: (_, __, cb) => cb(null, uploadsPath),
   filename: (_, file, cb) => {
     const safeName = file.originalname.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.-]/g, '');
     cb(null, `${Date.now()}-${safeName}`);

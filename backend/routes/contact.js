@@ -1,17 +1,8 @@
 import express from 'express';
 import nodemailer from 'nodemailer';
+import { getSmtpTransportConfig } from '../utils/smtpConfig.js';
 
 const router = express.Router();
-
-const getTransportConfig = () => ({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT || 587),
-  secure: String(process.env.SMTP_SECURE || 'false').toLowerCase() === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  }
-});
 
 const hasMailConfig = () => (
   process.env.SMTP_HOST &&
@@ -39,7 +30,7 @@ router.post('/', async (req, res) => {
     const receiverEmail = process.env.CONTACT_RECEIVER_EMAIL || 'irfwardrobe@gmail.com';
     const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
 
-    const transporter = nodemailer.createTransport(getTransportConfig());
+    const transporter = nodemailer.createTransport(getSmtpTransportConfig());
 
     await transporter.sendMail({
       from: `IRFWARDROBE Contact <${fromEmail}>`,

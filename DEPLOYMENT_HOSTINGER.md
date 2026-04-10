@@ -51,6 +51,14 @@ Required production values:
 - `JWT_SECRET`
 - `CORS_ORIGINS=https://irfwardrobe.com,https://www.irfwardrobe.com`
 
+Image persistence note:
+- Product image uploads should not be stored inside `backend/uploads` for production deployments.
+- Deploy/release operations often replace app files and can remove local upload folders.
+- If `UPLOADS_DIR` is not set, the backend automatically uses a persistent default folder:
+  - Linux: `/home/<server-user>/irfwardrobe-uploads`
+  - Windows: `C:/Users/<server-user>/irfwardrobe-uploads`
+- You can still set `UPLOADS_DIR` manually if you need a custom location.
+
 Start command:
 - `npm start`
 

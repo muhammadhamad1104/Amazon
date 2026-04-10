@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { ensureUploadsStorageReady } from './utils/uploadsPath.js';
 import authRoutes from './routes/auth.js';
 import productRoutes from './routes/products.js';
 import cartRoutes from './routes/cart.js';
@@ -31,11 +32,7 @@ const hasFrontendBuild = Boolean(frontendDistPath);
 const frontendIndexPath = hasFrontendBuild
   ? path.join(frontendDistPath, 'index.html')
   : null;
-const uploadsPath = path.resolve(__dirname, './uploads');
-
-if (!fs.existsSync(uploadsPath)) {
-  fs.mkdirSync(uploadsPath, { recursive: true });
-}
+const uploadStorage = ensureUploadsStorageReady();
 
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
@@ -60,7 +57,11 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use('/uploads', express.static(uploadsPath));
+app.use('/uploads', express.static(uploadStorage.uploadsPath));
+
+if (!uploadStorage.usesLegacyPath) {
+  app.use('/uploads', express.static(uploadStorage.legacyUploadsPath));
+}
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -159,6 +160,15 @@ connectDB();
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Uploads directory: ${uploadStorage.uploadsPath}`);
+
+  if (!uploadStorage.usesLegacyPath) {
+    console.log(`Legacy uploads fallback: ${uploadStorage.legacyUploadsPath}`);
+    if (uploadStorage.migratedCount > 0) {
+      console.log(`Migrated ${uploadStorage.migratedCount} legacy upload file(s) to persistent storage.`);
+    }
+  }
+
   if (hasFrontendBuild) {
     console.log(`Serving frontend from ${frontendDistPath}`);
   } else {

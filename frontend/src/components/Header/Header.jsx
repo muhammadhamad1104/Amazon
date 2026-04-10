@@ -6,6 +6,7 @@ import { cartAPI } from '../../api/api';
 import { toast } from 'react-toastify';
 import { formatPKR } from '../../utils/currency';
 import { resolveImageUrl } from '../../utils/media';
+import { getDisplaySize } from '../../utils/sizeStock';
 import './Header.css';
 
 const Header = () => {
@@ -16,29 +17,35 @@ const Header = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showCartDropdown, setShowCartDropdown] = useState(false);
-  const [pendingRemoveId, setPendingRemoveId] = useState(null);
+  const [pendingRemoveItem, setPendingRemoveItem] = useState(null);
   const isAdmin = isAuthenticated && user?.isAdmin;
   const isAdminRoute = location.pathname.startsWith('/admin');
+
+  const closeMobileMenu = () => setShowMobileMenu(false);
+
+  const toggleMobileMenu = () => {
+    setShowMobileMenu((previous) => !previous);
+  };
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchTerm.trim()) {
       navigate(`/products?search=${searchTerm}`);
-      setShowMobileMenu(false);
+      closeMobileMenu();
     }
   };
 
   const handleLogout = () => {
     logout();
     navigate('/');
-    setShowMobileMenu(false);
+    closeMobileMenu();
   };
 
   const cartItemsCount = cart?.items?.reduce((acc, item) => acc + item.quantity, 0) || 0;
 
-  const handleRemoveFromCart = async (productId) => {
+  const handleRemoveFromCart = async (productId, size) => {
     try {
-      const { data } = await cartAPI.remove(productId);
+      const { data } = await cartAPI.remove(productId, size);
       setCart(data);
       toast.success('Item removed from cart');
     } catch (error) {
@@ -46,16 +53,21 @@ const Header = () => {
     }
   };
 
-  const confirmRemove = (productId) => {
-    setPendingRemoveId(productId);
+  const confirmRemove = (item) => {
+    if (!item?.product?._id) return;
+    setPendingRemoveItem({
+      productId: item.product._id,
+      size: getDisplaySize(item.size),
+      name: item.product.name
+    });
   };
 
-  const cancelRemove = () => setPendingRemoveId(null);
+  const cancelRemove = () => setPendingRemoveItem(null);
 
   const handleConfirmRemove = async () => {
-    if (!pendingRemoveId) return;
-    await handleRemoveFromCart(pendingRemoveId);
-    setPendingRemoveId(null);
+    if (!pendingRemoveItem?.productId) return;
+    await handleRemoveFromCart(pendingRemoveItem.productId, pendingRemoveItem.size);
+    setPendingRemoveItem(null);
   };
 
   const toggleCartDropdown = (e) => {
@@ -77,6 +89,18 @@ const Header = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!showMobileMenu) {
+      document.body.style.overflow = '';
+      return;
+    }
+
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showMobileMenu]);
 
   // Hide header on admin pages
   if (isAdminRoute) {
@@ -117,30 +141,45 @@ const Header = () => {
         {/* Hamburger Menu Button */}
         <button 
           className="hamburger-btn"
-          onClick={() => setShowMobileMenu(!showMobileMenu)}
+          onClick={toggleMobileMenu}
           aria-label="Toggle menu"
         >
-          {showMobileMenu ? <FaTimes /> : <FaBars />}
+          <FaBars />
         </button>
 
+        {showMobileMenu && (
+          <button
+            className="mobile-nav-overlay"
+            onClick={closeMobileMenu}
+            aria-label="Close menu"
+          />
+        )}
+
         <nav className={`nav-links ${showMobileMenu ? 'show' : ''}`}>
+          <div className="mobile-menu-header">
+            <span>Menu</span>
+            <button type="button" className="mobile-close-btn" onClick={closeMobileMenu} aria-label="Close sidebar">
+              <FaTimes />
+            </button>
+          </div>
+
           {isAdmin ? (
             <>
-              <Link to="/admin" className="nav-link admin-link" onClick={() => setShowMobileMenu(false)}>
+              <Link to="/admin" className="nav-link admin-link" onClick={closeMobileMenu}>
                 📊 Admin Dashboard
               </Link>
             </>
           ) : (
             <>
-              <Link to="/products" className="nav-link" onClick={() => setShowMobileMenu(false)}>
+              <Link to="/products" className="nav-link" onClick={closeMobileMenu}>
                 Products
               </Link>
               
-              <Link to="/about" className="nav-link" onClick={() => setShowMobileMenu(false)}>
+              <Link to="/about" className="nav-link" onClick={closeMobileMenu}>
                 About
               </Link>
               
-              <Link to="/contact" className="nav-link" onClick={() => setShowMobileMenu(false)}>
+              <Link to="/contact" className="nav-link" onClick={closeMobileMenu}>
                 Contact
               </Link>
             </>
@@ -170,17 +209,18 @@ const Header = () => {
                     </div>
                     <div className="cart-dropdown-items">
                       {cart.items.map((item) => (
-                        <div key={item.product._id} className="cart-dropdown-item">
+                        <div key={`${item.product._id}-${getDisplaySize(item.size)}`} className="cart-dropdown-item">
                           <img src={resolveImageUrl(item.product.image)} alt={item.product.name} />
                           <div className="cart-item-info">
                             <h4>{item.product.name}</h4>
+                            <p className="cart-item-size">Size: {getDisplaySize(item.size)}</p>
                             <p className="cart-item-price">
                               {formatPKR(item.product.price)} × {item.quantity}
                             </p>
                           </div>
                           <button
                             className="remove-cart-item"
-                            onClick={() => confirmRemove(item.product._id)}
+                            onClick={() => confirmRemove(item)}
                             aria-label="Remove item"
                           >
                             <FaTrash />
@@ -198,7 +238,7 @@ const Header = () => {
                         className="view-cart-btn"
                         onClick={() => {
                           setShowCartDropdown(false);
-                          setShowMobileMenu(false);
+                          closeMobileMenu();
                         }}
                       >
                         View Cart
@@ -208,7 +248,7 @@ const Header = () => {
                         className="checkout-btn"
                         onClick={() => {
                           setShowCartDropdown(false);
-                          setShowMobileMenu(false);
+                          closeMobileMenu();
                         }}
                       >
                         Checkout
@@ -225,18 +265,21 @@ const Header = () => {
                       className="shop-now-btn"
                       onClick={() => {
                         setShowCartDropdown(false);
-                        setShowMobileMenu(false);
+                        closeMobileMenu();
                       }}
                     >
                       Shop Now
                     </Link>
                   </div>
                 )}
-                {pendingRemoveId && (
+                {pendingRemoveItem && (
                   <div className="cart-confirm-overlay" onClick={cancelRemove}>
                     <div className="cart-confirm-modal" onClick={(e) => e.stopPropagation()}>
                       <h4>Remove item?</h4>
-                      <p>Are you sure you want to remove this item from your cart?</p>
+                      <p>
+                        Are you sure you want to remove {pendingRemoveItem.name ? <strong>{pendingRemoveItem.name}</strong> : 'this item'}
+                        {pendingRemoveItem.size ? ` (size ${pendingRemoveItem.size})` : ''} from your cart?
+                      </p>
                       <div className="confirm-actions">
                         <button className="btn-cancel" onClick={cancelRemove}>Cancel</button>
                         <button className="btn-danger" onClick={handleConfirmRemove}>Remove</button>
@@ -258,10 +301,10 @@ const Header = () => {
                   <span>{user?.name}</span>
                 </button>
                 <div className="user-dropdown">
-                  <Link to="/profile" className="dropdown-item" onClick={() => setShowMobileMenu(false)}>
+                  <Link to="/profile" className="dropdown-item" onClick={closeMobileMenu}>
                     Profile
                   </Link>
-                  <Link to="/orders" className="dropdown-item" onClick={() => setShowMobileMenu(false)}>
+                  <Link to="/orders" className="dropdown-item" onClick={closeMobileMenu}>
                     Orders
                   </Link>
                   <button onClick={handleLogout} className="dropdown-item logout-btn">
@@ -272,10 +315,10 @@ const Header = () => {
             </>
           ) : (
             <>
-              <Link to="/login" className="nav-link" onClick={() => setShowMobileMenu(false)}>
+              <Link to="/login" className="nav-link" onClick={closeMobileMenu}>
                 Login
               </Link>
-              <Link to="/register" className="btn-primary" onClick={() => setShowMobileMenu(false)}>
+              <Link to="/register" className="btn-primary" onClick={closeMobileMenu}>
                 Sign Up
               </Link>
             </>

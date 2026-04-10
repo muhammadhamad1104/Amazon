@@ -234,4 +234,58 @@
   .orders-admin-filters input {
     width: 100%;
   }
+
+  .orders-admin-table-wrap {
+    overflow: visible;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .orders-admin-table {
+    min-width: 0;
+    display: block;
+  }
+
+  .orders-admin-table thead {
+    display: none;
+  }
+
+  .orders-admin-table tbody {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .orders-admin-table tbody tr {
+    display: block;
+    background: #fff;
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.08);
+  }
+
+  .orders-admin-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.7rem;
+    border: none;
+    padding: 0.45rem 0;
+  }
+
+  .orders-admin-table td::before {
+    content: attr(data-label);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #334155;
+    min-width: 92px;
+  }
+
+  .orders-admin-table td[data-label='Save'] .save-order-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .orders-admin-table select {
+    min-width: 0;
+  }
 }

@@ -6,6 +6,7 @@ import Loader from '../../components/Loader/Loader';
 import { toast } from 'react-toastify';
 import { formatPKR } from '../../utils/currency';
 import { resolveImageUrl } from '../../utils/media';
+import { getDisplaySize } from '../../utils/sizeStock';
 import './Orders.css';
 
 const Orders = () => {
@@ -110,6 +111,7 @@ const Orders = () => {
                       <img src={resolveImageUrl(item.image)} alt={item.name} />
                       <div className="order-item-details">
                         <h4>{item.name}</h4>
+                        <p>Size: {getDisplaySize(item.size)}</p>
                         <p>Quantity: {item.quantity}</p>
                         <p className="item-price">{formatPKR(item.price)} each</p>
                       </div>

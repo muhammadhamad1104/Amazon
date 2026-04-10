@@ -8,6 +8,11 @@ import { toast } from 'react-toastify';
 import { formatCategoryLabel } from '../../constants/productCategories';
 import { formatPKR } from '../../utils/currency';
 import { resolveImageUrl } from '../../utils/media';
+import {
+  getDisplaySize,
+  getProductAvailableSizes,
+  getProductSizeStockMap
+} from '../../utils/sizeStock';
 import './ProductDetail.css';
 
 const ProductDetail = () => {
@@ -16,6 +21,7 @@ const ProductDetail = () => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
+  const [selectedSize, setSelectedSize] = useState('');
   const [selectedImage, setSelectedImage] = useState(0);
   const [review, setReview] = useState({ rating: 5, comment: '' });
   const { isAuthenticated } = useAuthStore();
@@ -24,6 +30,16 @@ const ProductDetail = () => {
   useEffect(() => {
     fetchProduct();
   }, [id]);
+
+  useEffect(() => {
+    if (!product) return;
+
+    const sizeOptions = getProductAvailableSizes(product);
+    const firstAvailableSize = sizeOptions[0] || '';
+
+    setSelectedSize((currentSize) => (sizeOptions.includes(currentSize) ? currentSize : firstAvailableSize));
+    setQuantity(1);
+  }, [product]);
 
   const fetchProduct = async () => {
     setLoading(true);
@@ -45,10 +61,16 @@ const ProductDetail = () => {
       return;
     }
 
+    if (!selectedSize) {
+      toast.error('Please select a size');
+      return;
+    }
+
     try {
       const { data } = await cartAPI.add({
         productId: product._id,
-        quantity
+        quantity,
+        size: selectedSize
       });
       setCart(data);
       toast.success('Added to cart!');
@@ -101,6 +123,11 @@ const ProductDetail = () => {
     : [product.image])
     .map((image) => resolveImageUrl(image))
     .filter(Boolean);
+  const sizeStock = getProductSizeStockMap(product);
+  const sizeOptions = getProductAvailableSizes(product);
+  const totalStock = Object.values(sizeStock).reduce((sum, value) => sum + value, 0);
+  const activeSize = getDisplaySize(selectedSize, sizeOptions[0] || 'L');
+  const selectedSizeStock = sizeStock[activeSize] || 0;
 
   return (
     <div className="product-detail-page">
@@ -142,12 +169,13 @@ const ProductDetail = () => {
           </div>
 
           <div className="stock-info">
-            {product.stock > 0 ? (
+            {totalStock > 0 ? (
               <>
                 <span className="in-stock">✓ In Stock</span>
-                {product.stock < 10 && (
+                <span className="size-stock-note">Size {activeSize}: {selectedSizeStock} available</span>
+                {selectedSizeStock > 0 && selectedSizeStock < 10 && (
                   <span className="low-stock-warning">
-                    Only {product.stock} left - order soon
+                    Only {selectedSizeStock} left in size {activeSize}
                   </span>
                 )}
               </>
@@ -165,22 +193,48 @@ const ProductDetail = () => {
             <p><strong>Category:</strong> {formatCategoryLabel(product.category, product.subcategory)}</p>
           </div>
 
-          {product.stock > 0 && (
+          {totalStock > 0 && (
             <div className="purchase-section">
+              <div className="size-selector">
+                <label>Size:</label>
+                <div className="size-options">
+                  {sizeOptions.map((size) => {
+                    const stockForSize = sizeStock[size];
+                    const isSelected = selectedSize === size;
+                    return (
+                      <button
+                        key={size}
+                        type="button"
+                        className={`size-option-btn ${isSelected ? 'active' : ''}`}
+                        disabled={stockForSize === 0}
+                        onClick={() => {
+                          setSelectedSize(size);
+                          setQuantity(1);
+                        }}
+                      >
+                        {size}
+                        <span>{stockForSize}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="quantity-selector">
                 <label>Quantity:</label>
                 <select 
                   value={quantity} 
                   onChange={(e) => setQuantity(Number(e.target.value))}
                   className="quantity-select"
+                  disabled={selectedSizeStock <= 0}
                 >
-                  {[...Array(Math.min(product.stock, 10))].map((_, i) => (
+                  {[...Array(Math.min(selectedSizeStock, 10))].map((_, i) => (
                     <option key={i + 1} value={i + 1}>{i + 1}</option>
                   ))}
                 </select>
               </div>
 
-              <button onClick={handleAddToCart} className="add-to-cart-btn">
+              <button onClick={handleAddToCart} className="add-to-cart-btn" disabled={selectedSizeStock <= 0}>
                 <FaShoppingCart /> Add to Cart
               </button>
             </div>

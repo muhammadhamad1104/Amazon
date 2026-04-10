@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { normalizeSizeLabel } from '../utils/sizeStock.js';
 
 const orderSchema = new mongoose.Schema({
   user: {
@@ -14,6 +15,16 @@ const orderSchema = new mongoose.Schema({
     },
     name: String,
     price: Number,
+    size: {
+      type: String,
+      required: true,
+      default: 'L',
+      trim: true,
+      uppercase: true,
+      minlength: 1,
+      maxlength: 20,
+      set: (value) => normalizeSizeLabel(value) || 'L'
+    },
     quantity: {
       type: Number,
       required: true,

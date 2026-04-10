@@ -280,10 +280,42 @@
     font-size: 1.5rem;
   }
 
-  .products-table th,
+  .products-table {
+    display: block;
+  }
+
+  .products-table thead {
+    display: none;
+  }
+
+  .products-table tbody {
+    display: grid;
+    gap: 0.9rem;
+  }
+
+  .products-table tbody tr {
+    display: block;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 0.85rem;
+  }
+
   .products-table td {
-    padding: 0.75rem 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.8rem;
+    border: none;
+    padding: 0.45rem 0;
     font-size: 0.9rem;
+  }
+
+  .products-table td::before {
+    content: attr(data-label);
+    color: #334155;
+    font-weight: 700;
+    font-size: 0.82rem;
+    min-width: 72px;
   }
 
   .product-thumb {

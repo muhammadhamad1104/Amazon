@@ -6,7 +6,25 @@ import {
   getSubcategoryOptions
 } from '../../constants/productCategories';
 import { resolveImageUrl } from '../../utils/media';
+import {
+  DEFAULT_SIZE_OPTIONS,
+  normalizeSizeLabel,
+  normalizeSizeStock,
+  sortSizeKeys
+} from '../../utils/sizeStock';
 import './ProductFormModal.css';
+
+const createInitialSizeStock = () => ({});
+
+const createInitialSizeOptions = () => [...DEFAULT_SIZE_OPTIONS];
+
+const toEditableSizeStock = (sizeStock = {}, fallbackStock = 0) => {
+  const normalized = normalizeSizeStock(sizeStock, fallbackStock);
+  return Object.entries(normalized).reduce((accumulator, [size, quantity]) => {
+    accumulator[size] = String(quantity);
+    return accumulator;
+  }, {});
+};
 
 const ProductFormModal = ({ product, onSave, onClose }) => {
   const [formData, setFormData] = useState({
@@ -16,13 +34,15 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
     brand: '',
     category: '',
     subcategory: '',
-    stock: '',
+    sizeStock: createInitialSizeStock(),
     image: '',
     featured: false
   });
   const [imageMode, setImageMode] = useState('url');
   const [imageFile, setImageFile] = useState(null);
   const [filePreview, setFilePreview] = useState('');
+  const [sizeOptions, setSizeOptions] = useState(createInitialSizeOptions());
+  const [newSizeInput, setNewSizeInput] = useState('');
   const [saving, setSaving] = useState(false);
 
   const categories = PRODUCT_CATEGORY_OPTIONS;
@@ -38,6 +58,12 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
 
   useEffect(() => {
     if (product) {
+      const editableSizeStock = toEditableSizeStock(product.sizeStock, product.stock);
+      const productSizeOptions = sortSizeKeys([
+        ...DEFAULT_SIZE_OPTIONS,
+        ...Object.keys(editableSizeStock)
+      ]);
+
       setFormData({
         name: product.name || '',
         description: product.description || '',
@@ -45,10 +71,29 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
         brand: product.brand || '',
         category: product.category || '',
         subcategory: product.subcategory || '',
-        stock: product.stock || '',
+        sizeStock: editableSizeStock,
         image: product.image || '',
         featured: product.featured || false
       });
+      setSizeOptions(productSizeOptions);
+      setNewSizeInput('');
+      setImageMode('url');
+      setImageFile(null);
+      setFilePreview('');
+    } else {
+      setFormData({
+        name: '',
+        description: '',
+        price: '',
+        brand: '',
+        category: '',
+        subcategory: '',
+        sizeStock: createInitialSizeStock(),
+        image: '',
+        featured: false
+      });
+      setSizeOptions(createInitialSizeOptions());
+      setNewSizeInput('');
       setImageMode('url');
       setImageFile(null);
       setFilePreview('');
@@ -114,6 +159,62 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
     setImageFile(file);
   };
 
+  const selectedSizes = sortSizeKeys(Object.keys(formData.sizeStock || {}));
+
+  const toggleSizeSelection = (size) => {
+    const normalizedSize = normalizeSizeLabel(size);
+    if (!normalizedSize) return;
+
+    setFormData((prev) => {
+      const nextSizeStock = { ...(prev.sizeStock || {}) };
+
+      if (Object.prototype.hasOwnProperty.call(nextSizeStock, normalizedSize)) {
+        delete nextSizeStock[normalizedSize];
+      } else {
+        nextSizeStock[normalizedSize] = '1';
+      }
+
+      return {
+        ...prev,
+        sizeStock: nextSizeStock
+      };
+    });
+  };
+
+  const handleAddCustomSize = () => {
+    const normalizedSize = normalizeSizeLabel(newSizeInput);
+
+    if (!normalizedSize) {
+      toast.error('Please enter a valid size name');
+      return;
+    }
+
+    setSizeOptions((prev) => sortSizeKeys([...prev, normalizedSize]));
+
+    setFormData((prev) => ({
+      ...prev,
+      sizeStock: {
+        ...(prev.sizeStock || {}),
+        [normalizedSize]: prev.sizeStock?.[normalizedSize] || '1'
+      }
+    }));
+
+    setNewSizeInput('');
+  };
+
+  const handleSizeStockChange = (size, value) => {
+    const normalizedSize = normalizeSizeLabel(size);
+    if (!normalizedSize) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      sizeStock: {
+        ...prev.sizeStock,
+        [normalizedSize]: value
+      }
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -131,6 +232,26 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
       return;
     }
 
+    if (selectedSizes.length === 0) {
+      toast.error('Select at least one size and set its quantity');
+      return;
+    }
+
+    const sizeStockPayload = {};
+
+    for (const size of selectedSizes) {
+      const parsedQuantity = Math.floor(Number(formData.sizeStock?.[size] || 0));
+
+      if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
+        toast.error(`Please enter a quantity greater than 0 for size ${size}`);
+        return;
+      }
+
+      sizeStockPayload[size] = parsedQuantity;
+    }
+
+    const totalStock = Object.values(sizeStockPayload).reduce((sum, value) => sum + value, 0);
+
     const payload = new FormData();
     payload.append('name', formData.name.trim());
     payload.append('description', formData.description.trim());
@@ -138,7 +259,8 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
     payload.append('brand', formData.brand.trim());
     payload.append('category', formData.category);
     payload.append('subcategory', formData.subcategory || '');
-    payload.append('stock', formData.stock);
+    payload.append('sizeStock', JSON.stringify(sizeStockPayload));
+    payload.append('stock', String(totalStock));
     payload.append('featured', String(Boolean(formData.featured)));
 
     if (imageMode === 'url' && hasImageUrl) {
@@ -228,20 +350,6 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
             </div>
 
             <div className="form-field">
-              <label htmlFor="stock">Stock Quantity *</label>
-              <input
-                type="number"
-                id="stock"
-                name="stock"
-                value={formData.stock}
-                onChange={handleChange}
-                required
-                min="0"
-                placeholder="0"
-              />
-            </div>
-
-            <div className="form-field">
               <label htmlFor="category">Category *</label>
               <select
                 id="category"
@@ -279,6 +387,64 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className="form-field">
+            <label>Sizes and Quantity *</label>
+            <div className="size-selector-grid">
+              {sizeOptions.map((size) => {
+                const isSelected = selectedSizes.includes(size);
+                return (
+                  <button
+                    key={size}
+                    type="button"
+                    className={`size-toggle-btn ${isSelected ? 'selected' : ''}`}
+                    onClick={() => toggleSizeSelection(size)}
+                  >
+                    {size}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="custom-size-row">
+              <input
+                type="text"
+                value={newSizeInput}
+                onChange={(event) => setNewSizeInput(event.target.value)}
+                placeholder="Add custom size (e.g. 13 or XXXL)"
+              />
+              <button type="button" className="add-size-btn" onClick={handleAddCustomSize}>
+                Add Size
+              </button>
+            </div>
+
+            {selectedSizes.length > 0 ? (
+              <div className="size-stock-grid">
+                {selectedSizes.map((size) => (
+                  <div key={size} className="size-stock-field">
+                    <span>{size}</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.sizeStock[size] || ''}
+                      onChange={(event) => handleSizeStockChange(size, event.target.value)}
+                      placeholder="Qty"
+                      required
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="size-stock-empty">No size selected yet. Select one or more sizes above.</p>
+            )}
+
+            <p className="size-stock-total">
+              Total stock: {selectedSizes.reduce(
+                (sum, size) => sum + Math.max(0, Math.floor(Number(formData.sizeStock?.[size] || 0))),
+                0
+              )}
+            </p>
           </div>
 
           <div className="form-field">

@@ -103,18 +103,18 @@ const DashboardOverview = () => {
             <tbody>
               {stats.recentProducts.map((product) => (
                 <tr key={product._id}>
-                  <td>
+                  <td data-label="Image">
                     <img src={resolveImageUrl(product.image)} alt={product.name} className="product-thumb" />
                   </td>
-                  <td>{product.name}</td>
-                  <td><span className="category-badge">{formatCategoryLabel(product.category, product.subcategory)}</span></td>
-                  <td className="price-cell">{formatPKR(product.price)}</td>
-                  <td>
+                  <td data-label="Name">{product.name}</td>
+                  <td data-label="Category"><span className="category-badge">{formatCategoryLabel(product.category, product.subcategory)}</span></td>
+                  <td data-label="Price" className="price-cell">{formatPKR(product.price)}</td>
+                  <td data-label="Stock">
                     <span className={`stock-badge ${product.stock > 10 ? 'in-stock' : 'low-stock'}`}>
                       {product.stock} units
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Rating">
                     <span className="rating-badge">⭐ {product.rating.toFixed(1)}</span>
                   </td>
                 </tr>

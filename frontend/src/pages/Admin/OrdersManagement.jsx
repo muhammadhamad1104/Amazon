@@ -169,27 +169,27 @@ const OrdersManagement = () => {
 
               return (
                 <tr key={order._id}>
-                  <td>
+                  <td data-label="Order">
                     <div className="order-ref">#{order._id.slice(-8).toUpperCase()}</div>
                   </td>
-                  <td>
+                  <td data-label="Customer">
                     <div className="customer-name">{order.user?.name || 'Unknown User'}</div>
                     <div className="customer-email">{order.user?.email || 'No Email'}</div>
                   </td>
-                  <td>{new Date(order.createdAt).toLocaleDateString('en-US')}</td>
-                  <td className="order-amount">{formatPKR(order.totalPrice)}</td>
-                  <td>{order.items?.length || 0}</td>
-                  <td>
+                  <td data-label="Date">{new Date(order.createdAt).toLocaleDateString('en-US')}</td>
+                  <td data-label="Total" className="order-amount">{formatPKR(order.totalPrice)}</td>
+                  <td data-label="Items">{order.items?.length || 0}</td>
+                  <td data-label="Current Status">
                     <span className={`order-pill ${getOrderStatusClass(order.status)}`}>
                       {order.status}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Payment">
                     <span className={`payment-pill ${currentPaymentStatus === 'Cleared' ? 'cleared' : 'pending'}`}>
                       {currentPaymentStatus}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Set Status">
                     <select
                       value={selectedStatus}
                       onChange={(event) => handleDraftChange(order._id, 'status', event.target.value)}
@@ -199,7 +199,7 @@ const OrdersManagement = () => {
                       ))}
                     </select>
                   </td>
-                  <td>
+                  <td data-label="Set Payment">
                     <select
                       value={selectedPaymentStatus}
                       onChange={(event) => handleDraftChange(order._id, 'paymentStatus', event.target.value)}
@@ -209,7 +209,7 @@ const OrdersManagement = () => {
                       ))}
                     </select>
                   </td>
-                  <td>
+                  <td data-label="Save">
                     <button
                       type="button"
                       className="save-order-btn"

@@ -6,13 +6,14 @@ import Loader from '../../components/Loader/Loader';
 import { toast } from 'react-toastify';
 import { formatPKR } from '../../utils/currency';
 import { resolveImageUrl } from '../../utils/media';
+import { getDisplaySize } from '../../utils/sizeStock';
 import './Checkout.css';
 
 const FIXED_SHIPPING_CHARGE = 200;
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const { cart, clearCart } = useCartStore();
+  const { cart, setCart, clearCart } = useCartStore();
   const { user, isAuthenticated } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -43,6 +44,7 @@ const Checkout = () => {
         navigate('/cart');
         return;
       }
+      setCart(data);
     } catch (error) {
       toast.error('Failed to load cart');
       navigate('/cart');
@@ -61,6 +63,7 @@ const Checkout = () => {
         name: item.product.name,
         price: item.product.price,
         quantity: item.quantity,
+        size: getDisplaySize(item.size),
         image: item.product.image
       }));
 
@@ -180,10 +183,11 @@ const Checkout = () => {
               <h2>Order Items</h2>
               <div className="order-items">
                 {cart?.items?.map(item => (
-                  <div key={item.product._id} className="order-item">
+                  <div key={`${item.product._id}-${getDisplaySize(item.size)}`} className="order-item">
                     <img src={resolveImageUrl(item.product.image)} alt={item.product.name} />
                     <div className="order-item-info">
                       <h3>{item.product.name}</h3>
+                      <p>Size: {getDisplaySize(item.size)}</p>
                       <p>Quantity: {item.quantity}</p>
                     </div>
                     <div className="order-item-price">

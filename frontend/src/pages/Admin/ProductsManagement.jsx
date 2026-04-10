@@ -7,6 +7,7 @@ import ProductFormModal from './ProductFormModal';
 import { formatCategoryLabel } from '../../constants/productCategories';
 import { formatPKR } from '../../utils/currency';
 import { resolveImageUrl } from '../../utils/media';
+import { normalizeSizeStock, sortSizeKeys } from '../../utils/sizeStock';
 import './ProductsManagement.css';
 
 const ProductsManagement = () => {
@@ -21,6 +22,17 @@ const ProductsManagement = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [productsToShow, setProductsToShow] = useState(10); // Show 10 products initially
   const observer = useRef();
+
+  const getSizeStockSummary = (product) => {
+    const sizeStock = normalizeSizeStock(product?.sizeStock, product?.stock || 0);
+    const sizes = sortSizeKeys(Object.keys(sizeStock));
+
+    if (sizes.length === 0) {
+      return 'No size stock';
+    }
+
+    return sizes.map((size) => `${size}:${sizeStock[size]}`).join('  ');
+  };
 
   useEffect(() => {
     fetchProducts();
@@ -184,34 +196,35 @@ const ProductsManagement = () => {
                   key={product._id}
                   ref={isLastProduct ? lastProductRef : null}
                 >
-                  <td>
+                  <td data-label="Image">
                     <img src={resolveImageUrl(product.image)} alt={product.name} className="product-image" />
                   </td>
-                  <td>
+                  <td data-label="Name">
                     <div className="product-name-cell">
                       <strong>{product.name}</strong>
                     </div>
                   </td>
-                  <td>{product.brand}</td>
-                  <td>
+                  <td data-label="Brand">{product.brand}</td>
+                  <td data-label="Category">
                     <span className="category-tag">{formatCategoryLabel(product.category, product.subcategory)}</span>
                   </td>
-                  <td className="price-cell">{formatPKR(product.price)}</td>
-                  <td>
+                  <td data-label="Price" className="price-cell">{formatPKR(product.price)}</td>
+                  <td data-label="Stock">
                     <span className={`stock-tag ${product.stock > 10 ? 'high' : product.stock > 0 ? 'low' : 'out'}`}>
                       {product.stock} units
                     </span>
+                    <div className="size-breakdown">{getSizeStockSummary(product)}</div>
                   </td>
-                  <td>
+                  <td data-label="Rating">
                     <span className="rating-display">⭐ {product.rating.toFixed(1)}</span>
                     <span className="reviews-count">({product.numReviews})</span>
                   </td>
-                  <td>
+                  <td data-label="Featured">
                     <span className={`featured-badge ${product.featured ? 'yes' : 'no'}`}>
                       {product.featured ? 'Yes' : 'No'}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Actions">
                     <div className="action-buttons">
                       <button
                         className="action-btn edit"

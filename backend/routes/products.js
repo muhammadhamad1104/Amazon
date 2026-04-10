@@ -1,7 +1,12 @@
 import express from 'express';
-import Product from '../models/Product.js';
+import Product, { PRODUCT_SIZES } from '../models/Product.js';
 import { protect, admin } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
+import {
+  calculateTotalStockFromSizeStock,
+  normalizeSizeStockMap,
+  normalizeStockQuantity
+} from '../utils/sizeStock.js';
 import {
   CATEGORY_NAMES,
   categoryNeedsSubcategory,
@@ -33,6 +38,28 @@ const parseBoolean = (value) => {
   return undefined;
 };
 
+const parseSizeStock = (value, fallbackStock = 0) => {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  let parsedValue = value;
+
+  if (typeof value === 'string') {
+    try {
+      parsedValue = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+
+  if (!parsedValue || typeof parsedValue !== 'object' || Array.isArray(parsedValue)) {
+    return null;
+  }
+
+  return normalizeSizeStockMap(parsedValue, fallbackStock);
+};
+
 const buildUploadedImageUrl = (req, file) => {
   if (!file) return '';
   return `/uploads/${file.filename}`;
@@ -52,7 +79,29 @@ const normalizeProductPayload = (req) => {
   if (parsedPrice !== undefined) payload.price = parsedPrice;
 
   const parsedStock = parseNumber(body.stock);
-  if (parsedStock !== undefined) payload.stock = parsedStock;
+  let parsedSizeStock = parseSizeStock(body.sizeStock);
+
+  if (!parsedSizeStock) {
+    const hasSizeStockFields = PRODUCT_SIZES.some((size) => (
+      body[`sizeStock${size}`] !== undefined || body[`size${size}`] !== undefined
+    ));
+
+    if (hasSizeStockFields) {
+      const sizeStockFromFields = PRODUCT_SIZES.reduce((accumulator, size) => {
+        accumulator[size] = body[`sizeStock${size}`] ?? body[`size${size}`] ?? 0;
+        return accumulator;
+      }, {});
+      parsedSizeStock = normalizeSizeStockMap(sizeStockFromFields, parsedStock);
+    }
+  }
+
+  if (parsedSizeStock) {
+    payload.sizeStock = parsedSizeStock;
+    payload.stock = calculateTotalStockFromSizeStock(parsedSizeStock);
+  } else if (parsedStock !== undefined) {
+    payload.sizeStock = normalizeSizeStockMap({}, parsedStock);
+    payload.stock = normalizeStockQuantity(parsedStock);
+  }
 
   const parsedFeatured = parseBoolean(body.featured);
   if (parsedFeatured !== undefined) payload.featured = parsedFeatured;
@@ -207,6 +256,7 @@ router.put('/:id', protect, admin, upload.single('imageFile'), async (req, res) 
       if (payload.price !== undefined) product.price = payload.price;
       if (payload.brand !== undefined) product.brand = payload.brand;
       if (payload.stock !== undefined) product.stock = payload.stock;
+      if (payload.sizeStock !== undefined) product.sizeStock = payload.sizeStock;
       if (payload.featured !== undefined) product.featured = payload.featured;
       if (payload.category !== undefined) product.category = payload.category;
       if (payload.subcategory !== undefined) product.subcategory = payload.subcategory;

@@ -4,6 +4,11 @@ import Order from '../models/Order.js';
 import Cart from '../models/Cart.js';
 import Product from '../models/Product.js';
 import { protect, admin } from '../middleware/auth.js';
+import {
+  getSizeStockForProduct,
+  normalizeSizeLabel,
+  normalizeStockQuantity
+} from '../utils/sizeStock.js';
 
 const router = express.Router();
 
@@ -11,6 +16,36 @@ const CANCEL_WINDOW_HOURS = 24;
 const FIXED_SHIPPING_PRICE = 200;
 const ORDER_STATUSES = ['Pending', 'Processing', 'Shipped', 'Received', 'Delivered', 'Cancelled'];
 const NON_CANCELLABLE_STATUSES = new Set(['Shipped', 'Received', 'Delivered', 'Cancelled']);
+
+const normalizeSize = (value) => normalizeSizeLabel(value);
+
+const getDisplaySize = (value) => normalizeSize(value) || 'N/A';
+
+const setProductSizeStock = (product, size, quantity) => {
+  const normalizedSize = normalizeSize(size);
+  if (!normalizedSize) return;
+
+  const normalizedQuantity = normalizeStockQuantity(quantity);
+
+  if (product.sizeStock instanceof Map) {
+    if (normalizedQuantity > 0) {
+      product.sizeStock.set(normalizedSize, normalizedQuantity);
+    } else {
+      product.sizeStock.delete(normalizedSize);
+    }
+    return;
+  }
+
+  const currentSizeStock = product.sizeStock?.toObject ? product.sizeStock.toObject() : { ...(product.sizeStock || {}) };
+
+  if (normalizedQuantity > 0) {
+    currentSizeStock[normalizedSize] = normalizedQuantity;
+  } else {
+    delete currentSizeStock[normalizedSize];
+  }
+
+  product.sizeStock = currentSizeStock;
+};
 
 const hasMailConfig = () => (
   process.env.SMTP_HOST &&
@@ -29,11 +64,11 @@ const createTransporter = () => nodemailer.createTransport({
 });
 
 const buildItemsHtml = (items = []) => items.map((item) => (
-  `<li>${item.name} - Qty: ${item.quantity} - Rs ${Number(item.price || 0).toFixed(2)} each</li>`
+  `<li>${item.name} - Size: ${getDisplaySize(item.size)} - Qty: ${item.quantity} - Rs ${Number(item.price || 0).toFixed(2)} each</li>`
 )).join('');
 
 const buildItemsText = (items = []) => items.map((item) => (
-  `- ${item.name} | Qty: ${item.quantity} | Rs ${Number(item.price || 0).toFixed(2)} each`
+  `- ${item.name} | Size: ${getDisplaySize(item.size)} | Qty: ${item.quantity} | Rs ${Number(item.price || 0).toFixed(2)} each`
 )).join('\n');
 
 const sendOrderPlacementNotifications = async ({ order, customerName, customerEmail }) => {
@@ -123,18 +158,72 @@ router.post('/', protect, async (req, res) => {
   try {
     const { items, shippingAddress, paymentMethod } = req.body;
 
-    if (!items || items.length === 0) {
+    if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ message: 'No order items' });
     }
 
-    const itemsPrice = items.reduce((acc, item) => acc + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0);
+    const requestedItems = items.map((item) => ({
+      product: item?.product,
+      quantity: Math.floor(Number(item?.quantity || 0)),
+      size: normalizeSize(item?.size),
+      image: item?.image,
+      name: item?.name
+    }));
+
+    const invalidItem = requestedItems.find((item) => (
+      !item.product || !item.size || item.quantity <= 0
+    ));
+
+    if (invalidItem) {
+      return res.status(400).json({ message: 'Each order item must include valid product, size, and quantity' });
+    }
+
+    const productIds = [...new Set(requestedItems.map((item) => item.product.toString()))];
+    const products = await Product.find({ _id: { $in: productIds } });
+    const productMap = new Map(products.map((product) => [product._id.toString(), product]));
+
+    const requestedByProductAndSize = new Map();
+    requestedItems.forEach((item) => {
+      const key = `${item.product.toString()}::${item.size}`;
+      requestedByProductAndSize.set(key, (requestedByProductAndSize.get(key) || 0) + item.quantity);
+    });
+
+    for (const [key, requestedQuantity] of requestedByProductAndSize.entries()) {
+      const [productId, size] = key.split('::');
+      const product = productMap.get(productId);
+
+      if (!product) {
+        return res.status(404).json({ message: 'One or more products are no longer available' });
+      }
+
+      const availableSizeStock = getSizeStockForProduct(product, size);
+      if (availableSizeStock < requestedQuantity) {
+        return res.status(400).json({
+          message: `Only ${availableSizeStock} item(s) available for ${product.name} size ${size}`
+        });
+      }
+    }
+
+    const normalizedItems = requestedItems.map((item) => {
+      const product = productMap.get(item.product.toString());
+      return {
+        product: product._id,
+        name: product.name,
+        price: Number(product.price || 0),
+        quantity: item.quantity,
+        image: item.image || product.image,
+        size: item.size
+      };
+    });
+
+    const itemsPrice = normalizedItems.reduce((acc, item) => acc + (Number(item.price) || 0) * item.quantity, 0);
     const taxPrice = 0;
     const shippingPrice = FIXED_SHIPPING_PRICE;
     const totalPrice = itemsPrice + taxPrice + shippingPrice;
 
     const order = new Order({
       user: req.user._id,
-      items,
+      items: normalizedItems,
       shippingAddress,
       paymentMethod,
       taxPrice,
@@ -145,12 +234,26 @@ router.post('/', protect, async (req, res) => {
 
     const createdOrder = await order.save();
 
-    for (const item of items) {
-      const product = await Product.findById(item.product);
-      if (product) {
-        product.stock -= item.quantity;
-        await product.save();
+    const deductionByProduct = new Map();
+    normalizedItems.forEach((item) => {
+      const productId = item.product.toString();
+      if (!deductionByProduct.has(productId)) {
+        deductionByProduct.set(productId, {});
       }
+      const sizeMap = deductionByProduct.get(productId);
+      sizeMap[item.size] = (sizeMap[item.size] || 0) + item.quantity;
+    });
+
+    for (const [productId, sizeMap] of deductionByProduct.entries()) {
+      const product = productMap.get(productId);
+      if (!product) continue;
+
+      for (const [size, deductedQuantity] of Object.entries(sizeMap)) {
+        const currentSizeStock = getSizeStockForProduct(product, size);
+        setProductSizeStock(product, size, currentSizeStock - deductedQuantity);
+      }
+
+      await product.save();
     }
 
     await Cart.findOneAndUpdate(
@@ -336,7 +439,9 @@ router.put('/:id/cancel', protect, async (req, res) => {
     for (const item of order.items) {
       const product = await Product.findById(item.product);
       if (product) {
-        product.stock += item.quantity;
+        const normalizedSize = normalizeSize(item.size) || 'L';
+        const currentSizeStock = getSizeStockForProduct(product, normalizedSize);
+        setProductSizeStock(product, normalizedSize, currentSizeStock + item.quantity);
         await product.save();
       }
     }

@@ -1,5 +1,13 @@
 import mongoose from 'mongoose';
 import { CATEGORY_NAMES, isValidSubcategory } from '../config/productCategories.js';
+import {
+  DEFAULT_PRODUCT_SIZE_OPTIONS,
+  calculateTotalStockFromSizeStock,
+  normalizeSizeStockMap,
+  normalizeStockQuantity
+} from '../utils/sizeStock.js';
+
+export const PRODUCT_SIZES = DEFAULT_PRODUCT_SIZE_OPTIONS;
 
 const productSchema = new mongoose.Schema({
   name: {
@@ -41,6 +49,15 @@ const productSchema = new mongoose.Schema({
     required: true
   },
   images: [String],
+  sizeStock: {
+    type: Map,
+    of: {
+      type: Number,
+      min: 0,
+      set: normalizeStockQuantity
+    },
+    default: () => ({})
+  },
   stock: {
     type: Number,
     required: true,
@@ -76,6 +93,15 @@ const productSchema = new mongoose.Schema({
   }
 }, {
   timestamps: true
+});
+
+productSchema.pre('validate', function(next) {
+  const normalizedSizeStock = normalizeSizeStockMap(this.sizeStock, this.stock);
+
+  this.sizeStock = normalizedSizeStock;
+  this.stock = calculateTotalStockFromSizeStock(normalizedSizeStock);
+
+  next();
 });
 
 export default mongoose.model('Product', productSchema);

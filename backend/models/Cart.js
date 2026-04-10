@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { normalizeSizeLabel } from '../utils/sizeStock.js';
 
 const cartSchema = new mongoose.Schema({
   user: {
@@ -12,6 +13,16 @@ const cartSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Product',
       required: true
+    },
+    size: {
+      type: String,
+      required: true,
+      default: 'L',
+      trim: true,
+      uppercase: true,
+      minlength: 1,
+      maxlength: 20,
+      set: (value) => normalizeSizeLabel(value) || 'L'
     },
     quantity: {
       type: Number,

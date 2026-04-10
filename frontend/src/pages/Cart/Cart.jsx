@@ -7,6 +7,7 @@ import Loader from '../../components/Loader/Loader';
 import { toast } from 'react-toastify';
 import { formatPKR } from '../../utils/currency';
 import { resolveImageUrl } from '../../utils/media';
+import { getDisplaySize, getSizeStockForProduct } from '../../utils/sizeStock';
 import './Cart.css';
 
 const FIXED_SHIPPING_CHARGE = 200;
@@ -38,10 +39,11 @@ const Cart = () => {
     }
   };
 
-  const updateQuantity = async (productId, newQuantity) => {
+  const updateQuantity = async (productId, size, newQuantity) => {
     try {
       const { data } = await cartAPI.update({
         productId,
+        size,
         quantity: newQuantity
       });
       setCart(data);
@@ -50,9 +52,9 @@ const Cart = () => {
     }
   };
 
-  const removeItem = async (productId) => {
+  const removeItem = async (productId, size) => {
     try {
-      const { data } = await cartAPI.remove(productId);
+      const { data } = await cartAPI.remove(productId, size);
       setCart(data);
       toast.success('Item removed from cart');
     } catch (error) {
@@ -60,16 +62,20 @@ const Cart = () => {
     }
   };
 
-  const openRemoveConfirm = (product) => {
-    if (!product?._id) return;
-    setPendingRemove({ id: product._id, name: product.name });
+  const openRemoveConfirm = (item) => {
+    if (!item?.product?._id) return;
+    setPendingRemove({
+      id: item.product._id,
+      size: getDisplaySize(item.size),
+      name: item.product.name
+    });
   };
 
   const cancelRemove = () => setPendingRemove(null);
 
   const confirmRemove = async () => {
     if (!pendingRemove?.id) return;
-    await removeItem(pendingRemove.id);
+    await removeItem(pendingRemove.id, pendingRemove.size);
     setPendingRemove(null);
   };
 
@@ -128,8 +134,12 @@ const Cart = () => {
                 <span>Action</span>
               </div>
 
-              {cart.items.map((item) => (
-                <div key={item.product?._id} className="cart-item">
+              {cart.items.map((item) => {
+                const itemSize = getDisplaySize(item.size);
+                const sizeStock = getSizeStockForProduct(item.product, itemSize);
+
+                return (
+                <div key={`${item.product?._id}-${itemSize}`} className="cart-item">
                   <div className="item-product">
                     <Link to={`/product/${item.product?._id}`}>
                       <img src={resolveImageUrl(item.product?.image)} alt={item.product?.name} />
@@ -139,8 +149,9 @@ const Cart = () => {
                         {item.product?.name}
                       </Link>
                       <p className="item-brand">{item.product?.brand}</p>
-                      {item.product?.stock < 10 && (
-                        <p className="low-stock">Only {item.product?.stock} left!</p>
+                      <p className="item-size">Size: {itemSize}</p>
+                      {sizeStock < 10 && (
+                        <p className="low-stock">Only {sizeStock} left in size {itemSize}!</p>
                       )}
                     </div>
                   </div>
@@ -151,7 +162,7 @@ const Cart = () => {
 
                   <div className="item-quantity">
                     <button
-                      onClick={() => updateQuantity(item.product?._id, item.quantity - 1)}
+                      onClick={() => updateQuantity(item.product?._id, itemSize, item.quantity - 1)}
                       disabled={item.quantity <= 1}
                       className="qty-btn"
                     >
@@ -159,8 +170,8 @@ const Cart = () => {
                     </button>
                     <span className="qty-value">{item.quantity}</span>
                     <button
-                      onClick={() => updateQuantity(item.product?._id, item.quantity + 1)}
-                      disabled={item.quantity >= item.product?.stock}
+                      onClick={() => updateQuantity(item.product?._id, itemSize, item.quantity + 1)}
+                      disabled={item.quantity >= sizeStock}
                       className="qty-btn"
                     >
                       <FaPlus />
@@ -173,7 +184,7 @@ const Cart = () => {
 
                   <div className="item-action">
                     <button
-                      onClick={() => openRemoveConfirm(item.product)}
+                      onClick={() => openRemoveConfirm(item)}
                       className="remove-btn"
                       title="Remove item"
                     >
@@ -181,7 +192,7 @@ const Cart = () => {
                     </button>
                   </div>
                 </div>
-              ))}
+              )})}
 
               <div className="cart-actions">
                 <button onClick={openClearConfirm} className="clear-cart-btn">
@@ -231,7 +242,10 @@ const Cart = () => {
         <div className="cart-confirm-overlay" onClick={cancelRemove}>
           <div className="cart-confirm-modal" onClick={(e) => e.stopPropagation()}>
             <h4>Remove item?</h4>
-            <p>Are you sure you want to remove {pendingRemove.name ? <strong>{pendingRemove.name}</strong> : 'this item'} from your cart?</p>
+            <p>
+              Are you sure you want to remove {pendingRemove.name ? <strong>{pendingRemove.name}</strong> : 'this item'}
+              {pendingRemove.size ? ` (size ${pendingRemove.size})` : ''} from your cart?
+            </p>
             <div className="confirm-actions">
               <button className="btn-cancel" onClick={cancelRemove}>Cancel</button>
               <button className="btn-danger" onClick={confirmRemove}>Remove</button>

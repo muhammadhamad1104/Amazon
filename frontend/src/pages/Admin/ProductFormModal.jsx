@@ -104,18 +104,18 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
     const { name, value, type, checked } = e.target;
 
     if (name === 'category') {
-      setFormData({
-        ...formData,
+      setFormData((prev) => ({
+        ...prev,
         category: value,
         subcategory: ''
-      });
+      }));
       return;
     }
 
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [name]: type === 'checkbox' ? checked : value
-    });
+    }));
   };
 
   const handleImageModeChange = (mode) => {
@@ -215,8 +215,31 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
     }));
   };
 
+  const handleSizeStockBlur = (size) => {
+    const normalizedSize = normalizeSizeLabel(size);
+    if (!normalizedSize) return;
+
+    setFormData((prev) => {
+      const currentValue = prev.sizeStock?.[normalizedSize] ?? '';
+      const parsedQuantity = Math.floor(Number(currentValue));
+      const normalizedQuantity = Number.isFinite(parsedQuantity) && parsedQuantity > 0
+        ? String(parsedQuantity)
+        : '1';
+
+      return {
+        ...prev,
+        sizeStock: {
+          ...prev.sizeStock,
+          [normalizedSize]: normalizedQuantity
+        }
+      };
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const activeSizes = sortSizeKeys(Object.keys(formData.sizeStock || {}));
 
     const hasImageUrl = formData.image.trim().length > 0;
     const hasImageFile = Boolean(imageFile);
@@ -232,14 +255,14 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
       return;
     }
 
-    if (selectedSizes.length === 0) {
+    if (activeSizes.length === 0) {
       toast.error('Select at least one size and set its quantity');
       return;
     }
 
     const sizeStockPayload = {};
 
-    for (const size of selectedSizes) {
+    for (const size of activeSizes) {
       const parsedQuantity = Math.floor(Number(formData.sizeStock?.[size] || 0));
 
       if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
@@ -427,8 +450,10 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
                     <input
                       type="number"
                       min="1"
+                      step="1"
                       value={formData.sizeStock[size] || ''}
                       onChange={(event) => handleSizeStockChange(size, event.target.value)}
+                      onBlur={() => handleSizeStockBlur(size)}
                       placeholder="Qty"
                       required
                     />

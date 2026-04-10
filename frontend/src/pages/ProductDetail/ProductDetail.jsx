@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { productsAPI, cartAPI } from '../../api/api';
 import { useAuthStore, useCartStore } from '../../store/store';
@@ -23,13 +23,15 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedImage, setSelectedImage] = useState(0);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const addToCartInFlightRef = useRef(false);
   const [review, setReview] = useState({ rating: 5, comment: '' });
   const { isAuthenticated } = useAuthStore();
   const { setCart } = useCartStore();
 
   useEffect(() => {
     fetchProduct();
-  }, [id]);
+  }, [fetchProduct]);
 
   useEffect(() => {
     if (!product) return;
@@ -41,20 +43,24 @@ const ProductDetail = () => {
     setQuantity(1);
   }, [product]);
 
-  const fetchProduct = async () => {
+  const fetchProduct = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await productsAPI.getById(id);
       setProduct(data);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load product');
       navigate('/products');
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
 
   const handleAddToCart = async () => {
+    if (isAddingToCart || addToCartInFlightRef.current) {
+      return;
+    }
+
     if (!isAuthenticated) {
       toast.error('Please login to add items to cart');
       navigate('/login');
@@ -66,6 +72,9 @@ const ProductDetail = () => {
       return;
     }
 
+    addToCartInFlightRef.current = true;
+    setIsAddingToCart(true);
+
     try {
       const { data } = await cartAPI.add({
         productId: product._id,
@@ -76,6 +85,9 @@ const ProductDetail = () => {
       toast.success('Added to cart!');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to add to cart');
+    } finally {
+      addToCartInFlightRef.current = false;
+      setIsAddingToCart(false);
     }
   };
 
@@ -234,8 +246,13 @@ const ProductDetail = () => {
                 </select>
               </div>
 
-              <button onClick={handleAddToCart} className="add-to-cart-btn" disabled={selectedSizeStock <= 0}>
-                <FaShoppingCart /> Add to Cart
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                className="add-to-cart-btn"
+                disabled={selectedSizeStock <= 0 || isAddingToCart}
+              >
+                <FaShoppingCart /> {isAddingToCart ? 'Adding...' : 'Add to Cart'}
               </button>
             </div>
           )}

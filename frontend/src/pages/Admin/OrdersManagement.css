@@ -129,6 +129,40 @@
   color: #0f766e;
 }
 
+.order-items-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.items-total-count {
+  font-weight: 700;
+  color: #111827;
+  font-size: 0.85rem;
+}
+
+.size-qty-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.size-qty-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.size-qty-chip.empty {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
 .order-pill,
 .payment-pill {
   display: inline-flex;
@@ -287,5 +321,15 @@
 
   .orders-admin-table select {
     min-width: 0;
+  }
+
+  .orders-admin-table td[data-label='Items'] {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .orders-admin-table td[data-label='Items']::before {
+    min-width: 0;
+    margin-bottom: 0.25rem;
   }
 }

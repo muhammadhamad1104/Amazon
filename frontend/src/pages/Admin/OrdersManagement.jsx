@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import Loader from '../../components/Loader/Loader';
 import { ordersAPI } from '../../api/api';
 import { formatPKR } from '../../utils/currency';
+import { getDisplaySize, sortSizeKeys } from '../../utils/sizeStock';
 import './OrdersManagement.css';
 
 const ORDER_STATUS_OPTIONS = ['Pending', 'Processing', 'Shipped', 'Received', 'Delivered', 'Cancelled'];
@@ -25,6 +26,23 @@ const getOrderStatusClass = (status) => {
   if (normalized === 'delivered') return 'delivered';
   if (normalized === 'cancelled') return 'cancelled';
   return 'default';
+};
+
+const getOrderSizeQuantityBreakdown = (order) => {
+  const sizeTotals = (order?.items || []).reduce((accumulator, item) => {
+    const size = getDisplaySize(item?.size, 'N/A');
+    const quantity = Math.max(0, Math.floor(Number(item?.quantity || 0)));
+
+    if (quantity <= 0) return accumulator;
+
+    accumulator[size] = (accumulator[size] || 0) + quantity;
+    return accumulator;
+  }, {});
+
+  return sortSizeKeys(Object.keys(sizeTotals)).map((size) => ({
+    size,
+    quantity: sizeTotals[size]
+  }));
 };
 
 const OrdersManagement = () => {
@@ -166,6 +184,11 @@ const OrdersManagement = () => {
               const selectedStatus = draft.status ?? order.status;
               const selectedPaymentStatus = draft.paymentStatus ?? currentPaymentStatus;
               const isSaving = updatingOrderId === order._id;
+              const sizeQuantityBreakdown = getOrderSizeQuantityBreakdown(order);
+              const totalRequestedItems = sizeQuantityBreakdown.reduce(
+                (total, entry) => total + entry.quantity,
+                0
+              );
 
               return (
                 <tr key={order._id}>
@@ -178,7 +201,22 @@ const OrdersManagement = () => {
                   </td>
                   <td data-label="Date">{new Date(order.createdAt).toLocaleDateString('en-US')}</td>
                   <td data-label="Total" className="order-amount">{formatPKR(order.totalPrice)}</td>
-                  <td data-label="Items">{order.items?.length || 0}</td>
+                  <td data-label="Items">
+                    <div className="order-items-meta">
+                      <span className="items-total-count">{totalRequestedItems} item(s)</span>
+                      <div className="size-qty-list">
+                        {sizeQuantityBreakdown.length > 0 ? (
+                          sizeQuantityBreakdown.map((entry) => (
+                            <span key={`${order._id}-${entry.size}`} className="size-qty-chip">
+                              {entry.size}: {entry.quantity}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="size-qty-chip empty">No items</span>
+                        )}
+                      </div>
+                    </div>
+                  </td>
                   <td data-label="Current Status">
                     <span className={`order-pill ${getOrderStatusClass(order.status)}`}>
                       {order.status}

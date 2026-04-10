@@ -29,6 +29,19 @@ const ProductDetail = () => {
   const { isAuthenticated } = useAuthStore();
   const { setCart } = useCartStore();
 
+  const fetchProduct = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await productsAPI.getById(id);
+      setProduct(data);
+    } catch {
+      toast.error('Failed to load product');
+      navigate('/products');
+    } finally {
+      setLoading(false);
+    }
+  }, [id, navigate]);
+
   useEffect(() => {
     fetchProduct();
   }, [fetchProduct]);
@@ -42,19 +55,6 @@ const ProductDetail = () => {
     setSelectedSize((currentSize) => (sizeOptions.includes(currentSize) ? currentSize : firstAvailableSize));
     setQuantity(1);
   }, [product]);
-
-  const fetchProduct = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data } = await productsAPI.getById(id);
-      setProduct(data);
-    } catch {
-      toast.error('Failed to load product');
-      navigate('/products');
-    } finally {
-      setLoading(false);
-    }
-  }, [id, navigate]);
 
   const handleAddToCart = async () => {
     if (isAddingToCart || addToCartInFlightRef.current) {

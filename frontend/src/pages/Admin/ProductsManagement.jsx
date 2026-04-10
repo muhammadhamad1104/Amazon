@@ -5,9 +5,9 @@ import { FaPlus, FaEdit, FaTrash, FaSearch } from 'react-icons/fa';
 import Loader from '../../components/Loader/Loader';
 import ProductFormModal from './ProductFormModal';
 import { formatCategoryLabel } from '../../constants/productCategories';
-import { formatPKR } from '../../utils/currency';
 import { resolveImageUrl } from '../../utils/media';
 import { normalizeSizeStock, sortSizeKeys } from '../../utils/sizeStock';
+import PriceDisplay from '../../components/PriceDisplay/PriceDisplay';
 import './ProductsManagement.css';
 
 const ProductsManagement = () => {
@@ -208,7 +208,14 @@ const ProductsManagement = () => {
                   <td data-label="Category">
                     <span className="category-tag">{formatCategoryLabel(product.category, product.subcategory)}</span>
                   </td>
-                  <td data-label="Price" className="price-cell">{formatPKR(product.price)}</td>
+                  <td data-label="Price" className="price-cell">
+                    <PriceDisplay
+                      product={product}
+                      variant="compact"
+                      className="admin-price-display"
+                      showFromLabel
+                    />
+                  </td>
                   <td data-label="Stock">
                     <span className={`stock-tag ${product.stock > 10 ? 'high' : product.stock > 0 ? 'low' : 'out'}`}>
                       {product.stock} units

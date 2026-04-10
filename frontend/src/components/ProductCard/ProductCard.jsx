@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
-import { formatPKR } from '../../utils/currency';
 import { resolveImageUrl } from '../../utils/media';
+import PriceDisplay from '../PriceDisplay/PriceDisplay';
 import './ProductCard.css';
 
 const ProductCard = ({ product }) => {
@@ -41,7 +41,7 @@ const ProductCard = ({ product }) => {
         </div>
         
         <div className="product-footer">
-          <span className="product-price">{formatPKR(product.price)}</span>
+          <PriceDisplay product={product} showFromLabel />
           {product.stock > 0 && product.stock < 10 && (
             <span className="low-stock">Only {product.stock} left</span>
           )}

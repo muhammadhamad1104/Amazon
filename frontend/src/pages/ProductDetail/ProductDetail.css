@@ -106,10 +106,8 @@
   border-bottom: 1px solid #e0e0e0;
 }
 
-.price {
-  font-size: 2.5rem;
-  color: #b12704;
-  font-weight: bold;
+.price-section .price-display {
+  align-items: center;
 }
 
 .stock-info {

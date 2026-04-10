@@ -6,6 +6,7 @@ import Product from '../models/Product.js';
 import { protect, admin } from '../middleware/auth.js';
 import { getSmtpTransportConfig } from '../utils/smtpConfig.js';
 import {
+  getSizePricingForProduct,
   getSizeStockForProduct,
   normalizeSizeLabel,
   normalizeStockQuantity
@@ -199,10 +200,13 @@ router.post('/', protect, async (req, res) => {
 
     const normalizedItems = requestedItems.map((item) => {
       const product = productMap.get(item.product.toString());
+      const sizePricing = getSizePricingForProduct(product, item.size);
+
       return {
         product: product._id,
         name: product.name,
-        price: Number(product.price || 0),
+        price: Number(sizePricing.price || product.price || 0),
+        originalPrice: Number(sizePricing.originalPrice || sizePricing.price || product.originalPrice || product.price || 0),
         quantity: item.quantity,
         image: item.image || product.image,
         size: item.size

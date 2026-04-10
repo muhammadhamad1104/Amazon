@@ -4,8 +4,12 @@ import { protect, admin } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
 import {
   calculateTotalStockFromSizeStock,
+  calculateTotalStockFromSizePricing,
+  deriveSizeStockFromSizePricing,
+  normalizeSizePricingMap,
   normalizeSizeStockMap,
-  normalizeStockQuantity
+  normalizeStockQuantity,
+  selectDisplayPricingFromSizePricing
 } from '../utils/sizeStock.js';
 import {
   CATEGORY_NAMES,
@@ -60,6 +64,33 @@ const parseSizeStock = (value, fallbackStock = 0) => {
   return normalizeSizeStockMap(parsedValue, fallbackStock);
 };
 
+const parseSizePricing = (value, fallbackSizeStock = {}, fallbackPrice = 0, fallbackOriginalPrice = 0) => {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  let parsedValue = value;
+
+  if (typeof value === 'string') {
+    try {
+      parsedValue = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+
+  if (!parsedValue || typeof parsedValue !== 'object' || Array.isArray(parsedValue)) {
+    return null;
+  }
+
+  return normalizeSizePricingMap(
+    parsedValue,
+    fallbackSizeStock,
+    fallbackPrice,
+    fallbackOriginalPrice
+  );
+};
+
 const buildUploadedImageUrl = (req, file) => {
   if (!file) return '';
   return `/uploads/${file.filename}`;
@@ -78,8 +109,17 @@ const normalizeProductPayload = (req) => {
   const parsedPrice = parseNumber(body.price);
   if (parsedPrice !== undefined) payload.price = parsedPrice;
 
+  const parsedOriginalPrice = parseNumber(body.originalPrice);
+  if (parsedOriginalPrice !== undefined) payload.originalPrice = parsedOriginalPrice;
+
   const parsedStock = parseNumber(body.stock);
   let parsedSizeStock = parseSizeStock(body.sizeStock);
+  let parsedSizePricing = parseSizePricing(
+    body.sizePricing,
+    parsedSizeStock || {},
+    parsedPrice,
+    parsedOriginalPrice ?? parsedPrice
+  );
 
   if (!parsedSizeStock) {
     const hasSizeStockFields = PRODUCT_SIZES.some((size) => (
@@ -95,12 +135,52 @@ const normalizeProductPayload = (req) => {
     }
   }
 
-  if (parsedSizeStock) {
+  if (!parsedSizePricing && parsedSizeStock) {
+    parsedSizePricing = normalizeSizePricingMap(
+      {},
+      parsedSizeStock,
+      parsedPrice,
+      parsedOriginalPrice ?? parsedPrice
+    );
+  }
+
+  if (parsedSizePricing && Object.keys(parsedSizePricing).length > 0) {
+    payload.sizePricing = parsedSizePricing;
+    payload.sizeStock = deriveSizeStockFromSizePricing(parsedSizePricing);
+    payload.stock = calculateTotalStockFromSizePricing(parsedSizePricing);
+
+    const displayPricing = selectDisplayPricingFromSizePricing(
+      parsedSizePricing,
+      parsedPrice,
+      parsedOriginalPrice ?? parsedPrice
+    );
+
+    payload.price = displayPricing.price;
+    payload.originalPrice = displayPricing.originalPrice;
+  } else if (parsedSizeStock) {
     payload.sizeStock = parsedSizeStock;
     payload.stock = calculateTotalStockFromSizeStock(parsedSizeStock);
+
+    if (parsedPrice !== undefined) {
+      payload.price = parsedPrice;
+      payload.originalPrice = parsedOriginalPrice ?? parsedPrice;
+    }
   } else if (parsedStock !== undefined) {
     payload.sizeStock = normalizeSizeStockMap({}, parsedStock);
     payload.stock = normalizeStockQuantity(parsedStock);
+
+    if (parsedPrice !== undefined) {
+      payload.price = parsedPrice;
+      payload.originalPrice = parsedOriginalPrice ?? parsedPrice;
+    }
+  } else {
+    if (parsedPrice !== undefined) {
+      payload.price = parsedPrice;
+    }
+
+    if (parsedOriginalPrice !== undefined) {
+      payload.originalPrice = parsedOriginalPrice;
+    }
   }
 
   const parsedFeatured = parseBoolean(body.featured);
@@ -215,6 +295,15 @@ router.post('/', protect, admin, upload.single('imageFile'), async (req, res) =>
   try {
     const payload = normalizeProductPayload(req);
 
+    if (!payload.sizePricing && payload.sizeStock) {
+      payload.sizePricing = normalizeSizePricingMap(
+        {},
+        payload.sizeStock,
+        payload.price,
+        payload.originalPrice || payload.price
+      );
+    }
+
     if (!payload.image) {
       return res.status(400).json({ message: 'Please provide either an image URL or upload an image file' });
     }
@@ -243,6 +332,20 @@ router.put('/:id', protect, admin, upload.single('imageFile'), async (req, res) 
     if (product) {
       const payload = normalizeProductPayload(req);
 
+      if (payload.sizeStock !== undefined && payload.sizePricing === undefined) {
+        const fallbackPrice = payload.price !== undefined ? payload.price : product.price;
+        const fallbackOriginalPrice = payload.originalPrice !== undefined
+          ? payload.originalPrice
+          : (product.originalPrice || fallbackPrice);
+
+        payload.sizePricing = normalizeSizePricingMap(
+          {},
+          payload.sizeStock,
+          fallbackPrice,
+          fallbackOriginalPrice
+        );
+      }
+
       const nextCategory = payload.category || product.category;
       const nextSubcategory = payload.subcategory !== undefined ? payload.subcategory : (product.subcategory || '');
 
@@ -254,9 +357,11 @@ router.put('/:id', protect, admin, upload.single('imageFile'), async (req, res) 
       if (payload.name !== undefined) product.name = payload.name;
       if (payload.description !== undefined) product.description = payload.description;
       if (payload.price !== undefined) product.price = payload.price;
+      if (payload.originalPrice !== undefined) product.originalPrice = payload.originalPrice;
       if (payload.brand !== undefined) product.brand = payload.brand;
       if (payload.stock !== undefined) product.stock = payload.stock;
       if (payload.sizeStock !== undefined) product.sizeStock = payload.sizeStock;
+      if (payload.sizePricing !== undefined) product.sizePricing = payload.sizePricing;
       if (payload.featured !== undefined) product.featured = payload.featured;
       if (payload.category !== undefined) product.category = payload.category;
       if (payload.subcategory !== undefined) product.subcategory = payload.subcategory;

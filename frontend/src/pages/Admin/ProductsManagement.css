@@ -191,9 +191,11 @@
 }
 
 .price-cell {
-  font-weight: 700;
-  color: #27ae60;
-  font-size: 1.15rem;
+  min-width: 140px;
+}
+
+.admin-price-display {
+  justify-content: flex-start;
 }
 
 .stock-tag {

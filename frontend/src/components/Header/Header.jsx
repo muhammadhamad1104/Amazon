@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import { formatPKR } from '../../utils/currency';
 import { resolveImageUrl } from '../../utils/media';
 import { getDisplaySize } from '../../utils/sizeStock';
+import PriceDisplay from '../PriceDisplay/PriceDisplay';
 import './Header.css';
 
 const Header = () => {
@@ -214,9 +215,15 @@ const Header = () => {
                           <div className="cart-item-info">
                             <h4>{item.product.name}</h4>
                             <p className="cart-item-size">Size: {getDisplaySize(item.size)}</p>
-                            <p className="cart-item-price">
-                              {formatPKR(item.product.price)} × {item.quantity}
-                            </p>
+                            <div className="cart-item-price-line">
+                              <PriceDisplay
+                                product={item.product}
+                                size={getDisplaySize(item.size)}
+                                variant="compact"
+                                className="header-cart-price-display"
+                              />
+                              <span className="cart-item-multiplier">× {item.quantity}</span>
+                            </div>
                           </div>
                           <button
                             className="remove-cart-item"

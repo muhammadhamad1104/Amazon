@@ -1,0 +1,92 @@
+.price-display {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.price-from {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.price-current {
+  color: #b12704;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.price-original {
+  color: #dc2626;
+  text-decoration: line-through;
+  text-decoration-thickness: 1.7px;
+  text-decoration-color: #ef4444;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.price-change {
+  font-weight: 700;
+  font-size: 0.72rem;
+  line-height: 1;
+  padding: 0.22rem 0.45rem;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+
+.price-change.increase {
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.14);
+}
+
+.price-change.decrease {
+  color: #047857;
+  background: rgba(16, 185, 129, 0.16);
+}
+
+.price-display-default .price-current {
+  font-size: 1.2rem;
+}
+
+.price-display-default .price-original {
+  font-size: 0.86rem;
+}
+
+.price-display-compact {
+  gap: 0.35rem;
+}
+
+.price-display-compact .price-current {
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.price-display-compact .price-original {
+  font-size: 0.8rem;
+}
+
+.price-display-compact .price-change {
+  font-size: 0.66rem;
+  padding: 0.18rem 0.38rem;
+}
+
+.price-display-detail .price-current {
+  font-size: 2.35rem;
+}
+
+.price-display-detail .price-original {
+  font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+  .price-display-detail .price-current {
+    font-size: 2rem;
+  }
+
+  .price-display-detail .price-original {
+    font-size: 0.98rem;
+  }
+}

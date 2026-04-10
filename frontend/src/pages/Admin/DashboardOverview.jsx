@@ -5,6 +5,7 @@ import Loader from '../../components/Loader/Loader';
 import { formatCategoryLabel } from '../../constants/productCategories';
 import { formatPKR } from '../../utils/currency';
 import { resolveImageUrl } from '../../utils/media';
+import PriceDisplay from '../../components/PriceDisplay/PriceDisplay';
 import './DashboardOverview.css';
 
 const DashboardOverview = () => {
@@ -108,7 +109,14 @@ const DashboardOverview = () => {
                   </td>
                   <td data-label="Name">{product.name}</td>
                   <td data-label="Category"><span className="category-badge">{formatCategoryLabel(product.category, product.subcategory)}</span></td>
-                  <td data-label="Price" className="price-cell">{formatPKR(product.price)}</td>
+                  <td data-label="Price" className="price-cell">
+                    <PriceDisplay
+                      product={product}
+                      variant="compact"
+                      className="admin-price-display"
+                      showFromLabel
+                    />
+                  </td>
                   <td data-label="Stock">
                     <span className={`stock-badge ${product.stock > 10 ? 'in-stock' : 'low-stock'}`}>
                       {product.stock} units

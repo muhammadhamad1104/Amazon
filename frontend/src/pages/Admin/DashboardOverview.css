@@ -230,9 +230,11 @@
 }
 
 .price-cell {
-  font-weight: 600;
-  color: #27ae60;
-  font-size: 1.1rem;
+  min-width: 130px;
+}
+
+.admin-price-display {
+  justify-content: flex-start;
 }
 
 .stock-badge {

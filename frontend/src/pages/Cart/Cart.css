@@ -200,6 +200,10 @@
   font-size: 1.1rem;
 }
 
+.cart-price-display {
+  justify-content: flex-start;
+}
+
 .item-quantity {
   display: flex;
   align-items: center;

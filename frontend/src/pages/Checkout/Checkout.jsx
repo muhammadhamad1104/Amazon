@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { cartAPI, ordersAPI } from '../../api/api';
 import { useCartStore, useAuthStore } from '../../store/store';
 import Loader from '../../components/Loader/Loader';
+import PriceDisplay from '../../components/PriceDisplay/PriceDisplay';
 import { toast } from 'react-toastify';
 import { formatPKR } from '../../utils/currency';
 import { resolveImageUrl } from '../../utils/media';
-import { getDisplaySize } from '../../utils/sizeStock';
+import { getDisplaySize, getSizePricingForProduct } from '../../utils/sizeStock';
 import './Checkout.css';
 
 const FIXED_SHIPPING_CHARGE = 200;
@@ -58,14 +59,20 @@ const Checkout = () => {
     setSubmitting(true);
 
     try {
-      const orderItems = cart.items.map(item => ({
-        product: item.product._id,
-        name: item.product.name,
-        price: item.product.price,
-        quantity: item.quantity,
-        size: getDisplaySize(item.size),
-        image: item.product.image
-      }));
+      const orderItems = cart.items.map((item) => {
+        const itemSize = getDisplaySize(item.size);
+        const sizePricing = getSizePricingForProduct(item.product, itemSize);
+
+        return {
+          product: item.product._id,
+          name: item.product.name,
+          originalPrice: sizePricing.originalPrice || sizePricing.price,
+          price: sizePricing.price,
+          quantity: item.quantity,
+          size: itemSize,
+          image: item.product.image
+        };
+      });
 
       const { data } = await ordersAPI.create({
         items: orderItems,
@@ -85,7 +92,7 @@ const Checkout = () => {
   if (loading) return <Loader />;
 
   const subtotal = cart?.items?.reduce((acc, item) => 
-    acc + item.product.price * item.quantity, 0
+    acc + getSizePricingForProduct(item.product, getDisplaySize(item.size)).price * item.quantity, 0
   ) || 0;
   const tax = 0;
   const shipping = FIXED_SHIPPING_CHARGE;
@@ -189,9 +196,15 @@ const Checkout = () => {
                       <h3>{item.product.name}</h3>
                       <p>Size: {getDisplaySize(item.size)}</p>
                       <p>Quantity: {item.quantity}</p>
+                      <PriceDisplay
+                        product={item.product}
+                        size={getDisplaySize(item.size)}
+                        variant="compact"
+                        className="checkout-price-display"
+                      />
                     </div>
                     <div className="order-item-price">
-                      {formatPKR(item.product.price * item.quantity)}
+                      {formatPKR(getSizePricingForProduct(item.product, getDisplaySize(item.size)).price * item.quantity)}
                     </div>
                   </div>
                 ))}

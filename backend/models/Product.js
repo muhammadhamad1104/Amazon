@@ -2,7 +2,10 @@ import mongoose from 'mongoose';
 import { CATEGORY_NAMES, isValidSubcategory } from '../config/productCategories.js';
 import {
   DEFAULT_PRODUCT_SIZE_OPTIONS,
+  deriveSizeStockFromSizePricing,
   calculateTotalStockFromSizeStock,
+  normalizeSizePricingMap,
+  selectDisplayPricingFromSizePricing,
   normalizeSizeStockMap,
   normalizeStockQuantity
 } from '../utils/sizeStock.js';
@@ -23,6 +26,11 @@ const productSchema = new mongoose.Schema({
     type: Number,
     required: true,
     min: 0
+  },
+  originalPrice: {
+    type: Number,
+    min: 0,
+    default: 0
   },
   category: {
     type: String,
@@ -49,6 +57,25 @@ const productSchema = new mongoose.Schema({
     required: true
   },
   images: [String],
+  sizePricing: {
+    type: Map,
+    of: new mongoose.Schema({
+      quantity: {
+        type: Number,
+        min: 0,
+        set: normalizeStockQuantity
+      },
+      price: {
+        type: Number,
+        min: 0
+      },
+      originalPrice: {
+        type: Number,
+        min: 0
+      }
+    }, { _id: false }),
+    default: () => ({})
+  },
   sizeStock: {
     type: Map,
     of: {
@@ -96,10 +123,28 @@ const productSchema = new mongoose.Schema({
 });
 
 productSchema.pre('validate', function(next) {
-  const normalizedSizeStock = normalizeSizeStockMap(this.sizeStock, this.stock);
+  const normalizedSizePricing = normalizeSizePricingMap(
+    this.sizePricing,
+    this.sizeStock,
+    this.price,
+    this.originalPrice
+  );
+
+  this.sizePricing = normalizedSizePricing;
+
+  const derivedSizeStock = deriveSizeStockFromSizePricing(normalizedSizePricing);
+  const normalizedSizeStock = normalizeSizeStockMap(derivedSizeStock, this.stock);
+
+  const displayPricing = selectDisplayPricingFromSizePricing(
+    normalizedSizePricing,
+    this.price,
+    this.originalPrice
+  );
 
   this.sizeStock = normalizedSizeStock;
   this.stock = calculateTotalStockFromSizeStock(normalizedSizeStock);
+  this.price = displayPricing.price;
+  this.originalPrice = displayPricing.originalPrice;
 
   next();
 });

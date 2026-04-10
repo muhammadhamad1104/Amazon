@@ -4,6 +4,7 @@ import Product from '../models/Product.js';
 import { protect } from '../middleware/auth.js';
 import {
   getProductAvailableSizes,
+  getSizePricingForProduct,
   getSizeStockForProduct,
   normalizeSizeLabel
 } from '../utils/sizeStock.js';
@@ -34,7 +35,9 @@ const recalculateCartTotal = async (cart) => {
   await cart.populate('items.product');
   cart.totalPrice = cart.items.reduce((total, item) => {
     if (!item.product) return total;
-    return total + (item.product.price * item.quantity);
+
+    const sizePricing = getSizePricingForProduct(item.product, item.size);
+    return total + ((sizePricing.price || 0) * item.quantity);
   }, 0);
 };
 
@@ -47,7 +50,12 @@ router.get('/', protect, async (req, res) => {
       cart = await Cart.create({ user: req.user._id, items: [] });
     }
 
-    if (ensureCartItemSizes(cart)) {
+    const sizesNormalized = ensureCartItemSizes(cart);
+    const previousTotal = Number(cart.totalPrice || 0);
+    await recalculateCartTotal(cart);
+    const totalChanged = Math.abs(previousTotal - Number(cart.totalPrice || 0)) > 0.0001;
+
+    if (sizesNormalized || totalChanged) {
       await cart.save();
       await cart.populate('items.product');
     }

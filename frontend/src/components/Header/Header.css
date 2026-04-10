@@ -538,10 +538,20 @@
   font-weight: 600;
 }
 
-.cart-item-price {
-  color: #666;
-  font-size: 0.85rem;
-  margin: 0;
+.cart-item-price-line {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.header-cart-price-display {
+  justify-content: flex-start;
+}
+
+.cart-item-multiplier {
+  color: #555;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .remove-cart-item {

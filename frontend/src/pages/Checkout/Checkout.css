@@ -150,6 +150,10 @@
   margin: 0;
 }
 
+.checkout-price-display {
+  margin-top: 0.35rem;
+}
+
 .order-item-price {
   font-weight: 600;
   font-size: 1.1rem;

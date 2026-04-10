@@ -4,9 +4,9 @@ import { productsAPI, cartAPI } from '../../api/api';
 import { useAuthStore, useCartStore } from '../../store/store';
 import { FaStar, FaStarHalfAlt, FaRegStar, FaShoppingCart } from 'react-icons/fa';
 import Loader from '../../components/Loader/Loader';
+import PriceDisplay from '../../components/PriceDisplay/PriceDisplay';
 import { toast } from 'react-toastify';
 import { formatCategoryLabel } from '../../constants/productCategories';
-import { formatPKR } from '../../utils/currency';
 import { resolveImageUrl } from '../../utils/media';
 import {
   getDisplaySize,
@@ -177,7 +177,7 @@ const ProductDetail = () => {
           </div>
 
           <div className="price-section">
-            <span className="price">{formatPKR(product.price)}</span>
+            <PriceDisplay product={product} size={activeSize} variant="detail" />
           </div>
 
           <div className="stock-info">

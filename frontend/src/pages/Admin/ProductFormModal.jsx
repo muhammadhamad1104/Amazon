@@ -9,32 +9,56 @@ import { resolveImageUrl } from '../../utils/media';
 import {
   DEFAULT_SIZE_OPTIONS,
   normalizeSizeLabel,
-  normalizeSizeStock,
+  normalizeSizePricingMap,
   sortSizeKeys
 } from '../../utils/sizeStock';
 import './ProductFormModal.css';
 
-const createInitialSizeStock = () => ({});
+const createInitialSizePricing = () => ({});
 
 const createInitialSizeOptions = () => [...DEFAULT_SIZE_OPTIONS];
 
-const toEditableSizeStock = (sizeStock = {}, fallbackStock = 0) => {
-  const normalized = normalizeSizeStock(sizeStock, fallbackStock);
+const toEditableSizePricing = (product = null) => {
+  const normalized = normalizeSizePricingMap(
+    product?.sizePricing,
+    product?.sizeStock,
+    product?.price || 0,
+    product?.originalPrice || product?.price || 0
+  );
+
   return Object.entries(normalized).reduce((accumulator, [size, quantity]) => {
-    accumulator[size] = String(quantity);
+    accumulator[size] = {
+      quantity: String(quantity.quantity || 0),
+      originalPrice: String(quantity.originalPrice || 0),
+      price: String(quantity.price || 0)
+    };
     return accumulator;
   }, {});
+};
+
+const getDefaultVariantPricing = (sizePricing = {}) => {
+  const existingVariant = Object.values(sizePricing).find((variant) => (
+    Number(variant?.price) > 0 || Number(variant?.originalPrice) > 0
+  ));
+
+  const fallbackPrice = existingVariant?.price || '';
+  const fallbackOriginalPrice = existingVariant?.originalPrice || fallbackPrice || '';
+
+  return {
+    quantity: '1',
+    originalPrice: String(fallbackOriginalPrice),
+    price: String(fallbackPrice)
+  };
 };
 
 const ProductFormModal = ({ product, onSave, onClose }) => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    price: '',
     brand: '',
     category: '',
     subcategory: '',
-    sizeStock: createInitialSizeStock(),
+    sizePricing: createInitialSizePricing(),
     image: '',
     featured: false
   });
@@ -58,20 +82,19 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
 
   useEffect(() => {
     if (product) {
-      const editableSizeStock = toEditableSizeStock(product.sizeStock, product.stock);
+      const editableSizePricing = toEditableSizePricing(product);
       const productSizeOptions = sortSizeKeys([
         ...DEFAULT_SIZE_OPTIONS,
-        ...Object.keys(editableSizeStock)
+        ...Object.keys(editableSizePricing)
       ]);
 
       setFormData({
         name: product.name || '',
         description: product.description || '',
-        price: product.price || '',
         brand: product.brand || '',
         category: product.category || '',
         subcategory: product.subcategory || '',
-        sizeStock: editableSizeStock,
+        sizePricing: editableSizePricing,
         image: product.image || '',
         featured: product.featured || false
       });
@@ -84,11 +107,10 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
       setFormData({
         name: '',
         description: '',
-        price: '',
         brand: '',
         category: '',
         subcategory: '',
-        sizeStock: createInitialSizeStock(),
+        sizePricing: createInitialSizePricing(),
         image: '',
         featured: false
       });
@@ -159,24 +181,24 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
     setImageFile(file);
   };
 
-  const selectedSizes = sortSizeKeys(Object.keys(formData.sizeStock || {}));
+  const selectedSizes = sortSizeKeys(Object.keys(formData.sizePricing || {}));
 
   const toggleSizeSelection = (size) => {
     const normalizedSize = normalizeSizeLabel(size);
     if (!normalizedSize) return;
 
     setFormData((prev) => {
-      const nextSizeStock = { ...(prev.sizeStock || {}) };
+      const nextSizePricing = { ...(prev.sizePricing || {}) };
 
-      if (Object.prototype.hasOwnProperty.call(nextSizeStock, normalizedSize)) {
-        delete nextSizeStock[normalizedSize];
+      if (Object.prototype.hasOwnProperty.call(nextSizePricing, normalizedSize)) {
+        delete nextSizePricing[normalizedSize];
       } else {
-        nextSizeStock[normalizedSize] = '1';
+        nextSizePricing[normalizedSize] = getDefaultVariantPricing(prev.sizePricing || {});
       }
 
       return {
         ...prev,
-        sizeStock: nextSizeStock
+        sizePricing: nextSizePricing
       };
     });
   };
@@ -193,44 +215,60 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
 
     setFormData((prev) => ({
       ...prev,
-      sizeStock: {
-        ...(prev.sizeStock || {}),
-        [normalizedSize]: prev.sizeStock?.[normalizedSize] || '1'
+      sizePricing: {
+        ...(prev.sizePricing || {}),
+        [normalizedSize]: prev.sizePricing?.[normalizedSize] || getDefaultVariantPricing(prev.sizePricing || {})
       }
     }));
 
     setNewSizeInput('');
   };
 
-  const handleSizeStockChange = (size, value) => {
+  const handleSizePricingChange = (size, field, value) => {
     const normalizedSize = normalizeSizeLabel(size);
     if (!normalizedSize) return;
 
     setFormData((prev) => ({
       ...prev,
-      sizeStock: {
-        ...prev.sizeStock,
-        [normalizedSize]: value
+      sizePricing: {
+        ...prev.sizePricing,
+        [normalizedSize]: {
+          ...(prev.sizePricing?.[normalizedSize] || getDefaultVariantPricing(prev.sizePricing || {})),
+          [field]: value
+        }
       }
     }));
   };
 
-  const handleSizeStockBlur = (size) => {
+  const handleSizePricingBlur = (size, field) => {
     const normalizedSize = normalizeSizeLabel(size);
     if (!normalizedSize) return;
 
     setFormData((prev) => {
-      const currentValue = prev.sizeStock?.[normalizedSize] ?? '';
-      const parsedQuantity = Math.floor(Number(currentValue));
-      const normalizedQuantity = Number.isFinite(parsedQuantity) && parsedQuantity > 0
-        ? String(parsedQuantity)
-        : '1';
+      const currentVariant = prev.sizePricing?.[normalizedSize] || getDefaultVariantPricing(prev.sizePricing || {});
+      const currentValue = currentVariant[field] ?? '';
+      let normalizedValue = currentValue;
+
+      if (field === 'quantity') {
+        const parsedQuantity = Math.floor(Number(currentValue));
+        normalizedValue = Number.isFinite(parsedQuantity) && parsedQuantity > 0
+          ? String(parsedQuantity)
+          : '1';
+      } else {
+        const parsedPrice = Number(currentValue);
+        normalizedValue = Number.isFinite(parsedPrice) && parsedPrice > 0
+          ? String(parsedPrice)
+          : '';
+      }
 
       return {
         ...prev,
-        sizeStock: {
-          ...prev.sizeStock,
-          [normalizedSize]: normalizedQuantity
+        sizePricing: {
+          ...prev.sizePricing,
+          [normalizedSize]: {
+            ...currentVariant,
+            [field]: normalizedValue
+          }
         }
       };
     });
@@ -239,7 +277,7 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const activeSizes = sortSizeKeys(Object.keys(formData.sizeStock || {}));
+    const activeSizes = sortSizeKeys(Object.keys(formData.sizePricing || {}));
 
     const hasImageUrl = formData.image.trim().length > 0;
     const hasImageFile = Boolean(imageFile);
@@ -260,29 +298,57 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
       return;
     }
 
-    const sizeStockPayload = {};
+    const sizePricingPayload = {};
 
     for (const size of activeSizes) {
-      const parsedQuantity = Math.floor(Number(formData.sizeStock?.[size] || 0));
+      const sizeVariant = formData.sizePricing?.[size] || {};
+      const parsedQuantity = Math.floor(Number(sizeVariant.quantity || 0));
+      const parsedOriginalPrice = Number(sizeVariant.originalPrice || 0);
+      const parsedNewPrice = Number(sizeVariant.price || 0);
 
       if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
         toast.error(`Please enter a quantity greater than 0 for size ${size}`);
         return;
       }
 
-      sizeStockPayload[size] = parsedQuantity;
+      if (!Number.isFinite(parsedOriginalPrice) || parsedOriginalPrice <= 0) {
+        toast.error(`Please enter a valid original price for size ${size}`);
+        return;
+      }
+
+      if (!Number.isFinite(parsedNewPrice) || parsedNewPrice <= 0) {
+        toast.error(`Please enter a valid new price for size ${size}`);
+        return;
+      }
+
+      sizePricingPayload[size] = {
+        quantity: parsedQuantity,
+        originalPrice: parsedOriginalPrice,
+        price: parsedNewPrice
+      };
     }
 
-    const totalStock = Object.values(sizeStockPayload).reduce((sum, value) => sum + value, 0);
+    const totalStock = Object.values(sizePricingPayload).reduce(
+      (sum, value) => sum + value.quantity,
+      0
+    );
+
+    const displayVariant = Object.values(sizePricingPayload).reduce((current, candidate) => (
+      !current || candidate.price < current.price ? candidate : current
+    ), null);
 
     const payload = new FormData();
     payload.append('name', formData.name.trim());
     payload.append('description', formData.description.trim());
-    payload.append('price', formData.price);
     payload.append('brand', formData.brand.trim());
     payload.append('category', formData.category);
     payload.append('subcategory', formData.subcategory || '');
-    payload.append('sizeStock', JSON.stringify(sizeStockPayload));
+    payload.append('sizePricing', JSON.stringify(sizePricingPayload));
+    payload.append('sizeStock', JSON.stringify(Object.fromEntries(
+      Object.entries(sizePricingPayload).map(([size, variant]) => [size, variant.quantity])
+    )));
+    payload.append('price', String(displayVariant?.price || 0));
+    payload.append('originalPrice', String(displayVariant?.originalPrice || displayVariant?.price || 0));
     payload.append('stock', String(totalStock));
     payload.append('featured', String(Boolean(formData.featured)));
 
@@ -358,21 +424,6 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
 
           <div className="form-row">
             <div className="form-field">
-              <label htmlFor="price">Price (PKR) *</label>
-              <input
-                type="number"
-                id="price"
-                name="price"
-                value={formData.price}
-                onChange={handleChange}
-                required
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-              />
-            </div>
-
-            <div className="form-field">
               <label htmlFor="category">Category *</label>
               <select
                 id="category"
@@ -413,7 +464,7 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
           </div>
 
           <div className="form-field">
-            <label>Sizes and Quantity *</label>
+            <label>Sizes, Quantity and Pricing *</label>
             <div className="size-selector-grid">
               {sizeOptions.map((size) => {
                 const isSelected = selectedSizes.includes(size);
@@ -435,7 +486,7 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
                 type="text"
                 value={newSizeInput}
                 onChange={(event) => setNewSizeInput(event.target.value)}
-                placeholder="Add custom size (e.g. 13 or XXXL)"
+                placeholder="Add custom size (e.g. 28 or 4 PIECE)"
               />
               <button type="button" className="add-size-btn" onClick={handleAddCustomSize}>
                 Add Size
@@ -447,16 +498,45 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
                 {selectedSizes.map((size) => (
                   <div key={size} className="size-stock-field">
                     <span>{size}</span>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={formData.sizeStock[size] || ''}
-                      onChange={(event) => handleSizeStockChange(size, event.target.value)}
-                      onBlur={() => handleSizeStockBlur(size)}
-                      placeholder="Qty"
-                      required
-                    />
+                    <label className="size-metric-group">
+                      <small>Quantity</small>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={formData.sizePricing?.[size]?.quantity || ''}
+                        onChange={(event) => handleSizePricingChange(size, 'quantity', event.target.value)}
+                        onBlur={() => handleSizePricingBlur(size, 'quantity')}
+                        placeholder="Qty"
+                        required
+                      />
+                    </label>
+                    <label className="size-metric-group">
+                      <small>Original Price</small>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.sizePricing?.[size]?.originalPrice || ''}
+                        onChange={(event) => handleSizePricingChange(size, 'originalPrice', event.target.value)}
+                        onBlur={() => handleSizePricingBlur(size, 'originalPrice')}
+                        placeholder="Old price"
+                        required
+                      />
+                    </label>
+                    <label className="size-metric-group">
+                      <small>New Price</small>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.sizePricing?.[size]?.price || ''}
+                        onChange={(event) => handleSizePricingChange(size, 'price', event.target.value)}
+                        onBlur={() => handleSizePricingBlur(size, 'price')}
+                        placeholder="New price"
+                        required
+                      />
+                    </label>
                   </div>
                 ))}
               </div>
@@ -466,7 +546,7 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
 
             <p className="size-stock-total">
               Total stock: {selectedSizes.reduce(
-                (sum, size) => sum + Math.max(0, Math.floor(Number(formData.sizeStock?.[size] || 0))),
+                (sum, size) => sum + Math.max(0, Math.floor(Number(formData.sizePricing?.[size]?.quantity || 0))),
                 0
               )}
             </p>

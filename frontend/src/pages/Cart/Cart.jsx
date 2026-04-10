@@ -7,7 +7,8 @@ import Loader from '../../components/Loader/Loader';
 import { toast } from 'react-toastify';
 import { formatPKR } from '../../utils/currency';
 import { resolveImageUrl } from '../../utils/media';
-import { getDisplaySize, getSizeStockForProduct } from '../../utils/sizeStock';
+import { getDisplaySize, getSizePricingForProduct, getSizeStockForProduct } from '../../utils/sizeStock';
+import PriceDisplay from '../../components/PriceDisplay/PriceDisplay';
 import './Cart.css';
 
 const FIXED_SHIPPING_CHARGE = 200;
@@ -99,7 +100,7 @@ const Cart = () => {
   if (loading) return <Loader />;
 
   const subtotal = cart?.items?.reduce((acc, item) => 
-    acc + (item.product?.price || 0) * item.quantity, 0
+    acc + (getSizePricingForProduct(item.product, getDisplaySize(item.size)).price || 0) * item.quantity, 0
   ) || 0;
 
   const tax = 0;
@@ -137,6 +138,7 @@ const Cart = () => {
               {cart.items.map((item) => {
                 const itemSize = getDisplaySize(item.size);
                 const sizeStock = getSizeStockForProduct(item.product, itemSize);
+                const sizePricing = getSizePricingForProduct(item.product, itemSize);
 
                 return (
                 <div key={`${item.product?._id}-${itemSize}`} className="cart-item">
@@ -157,7 +159,12 @@ const Cart = () => {
                   </div>
 
                   <div className="item-price">
-                    {formatPKR(item.product?.price)}
+                    <PriceDisplay
+                      product={item.product}
+                      size={itemSize}
+                      variant="compact"
+                      className="cart-price-display"
+                    />
                   </div>
 
                   <div className="item-quantity">
@@ -179,7 +186,7 @@ const Cart = () => {
                   </div>
 
                   <div className="item-total">
-                    {formatPKR((item.product?.price || 0) * item.quantity)}
+                    {formatPKR((sizePricing.price || 0) * item.quantity)}
                   </div>
 
                   <div className="item-action">

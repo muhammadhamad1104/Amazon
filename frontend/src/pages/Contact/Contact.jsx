@@ -73,17 +73,9 @@ const Contact = () => {
                 </div>
                 <h3>Call Us</h3>
                 {phoneLinks.map((phone) => (
-                  <div key={phone.dial} className="contact-phone-row">
+                  <p key={phone.dial}>
                     <a className="contact-link" href={`tel:${phone.dial}`}>{phone.label}</a>
-                    <a
-                      className="contact-whatsapp-link"
-                      href={`https://wa.me/${phone.dial.replace('+', '')}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      WhatsApp
-                    </a>
-                  </div>
+                  </p>
                 ))}
                 <p className="info-subtitle">Mon-Sat, 9:00 AM - 6:00 PM</p>
               </div>

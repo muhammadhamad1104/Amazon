@@ -42,6 +42,15 @@
   color: white;
 }
 
+.ad-company {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffd37a;
+  margin-bottom: 0.65rem;
+}
+
 .ad-overlay h2 {
   font-size: 2rem;
   margin-bottom: 0.5rem;

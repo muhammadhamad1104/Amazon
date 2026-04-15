@@ -5,6 +5,12 @@ import { contactAPI } from '../../api/api';
 import './Contact.css';
 
 const Contact = () => {
+  const contactEmail = 'irfwardrobe@gmail.com';
+  const phoneLinks = [
+    { label: '+92 330 6066708', dial: '+923306066708' },
+    { label: '+92 347 3941140', dial: '+923473941140' }
+  ];
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -55,7 +61,9 @@ const Contact = () => {
                   <FaEnvelope className="info-icon" />
                 </div>
                 <h3>Email Us</h3>
-                <p>irfwardrobe@gmail.com</p>
+                <p>
+                  <a className="contact-link" href={`mailto:${contactEmail}`}>{contactEmail}</a>
+                </p>
                 <p className="info-subtitle">We'll respond within 24 hours</p>
               </div>
               
@@ -64,7 +72,19 @@ const Contact = () => {
                   <FaPhone className="info-icon" />
                 </div>
                 <h3>Call Us</h3>
-                <p>+92 316 4928847</p>
+                {phoneLinks.map((phone) => (
+                  <div key={phone.dial} className="contact-phone-row">
+                    <a className="contact-link" href={`tel:${phone.dial}`}>{phone.label}</a>
+                    <a
+                      className="contact-whatsapp-link"
+                      href={`https://wa.me/${phone.dial.replace('+', '')}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      WhatsApp
+                    </a>
+                  </div>
+                ))}
                 <p className="info-subtitle">Mon-Sat, 9:00 AM - 6:00 PM</p>
               </div>
               
@@ -73,7 +93,7 @@ const Contact = () => {
                   <FaMapMarkerAlt className="info-icon" />
                 </div>
                 <h3>Visit Us</h3>
-                <p>Islamabad, Pakistan</p>
+                <p>Kot Addu, Pakistan</p>
                 <p className="info-subtitle">Come say hello!</p>
               </div>
               

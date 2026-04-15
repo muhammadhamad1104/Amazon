@@ -33,6 +33,19 @@ const Products = () => {
     : ['All'];
 
   useEffect(() => {
+    const categoryFromQuery = searchParams.get('category') || 'All';
+    const subcategoryFromQuery = searchParams.get('subcategory') || 'All';
+    const searchFromQuery = searchParams.get('search') || '';
+
+    setFilters((prev) => ({
+      ...prev,
+      category: categoryFromQuery,
+      subcategory: subcategoryFromQuery,
+      search: searchFromQuery
+    }));
+  }, [searchParams]);
+
+  useEffect(() => {
     fetchProducts();
   }, [filters]);
 

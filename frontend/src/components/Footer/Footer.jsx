@@ -30,7 +30,8 @@ const Footer = () => {
             <li><Link to="/contact">Contact Us</Link></li>
           </ul>
           <p>irfwardrobe@gmail.com</p>
-          <p>+92 316 4928847</p>
+          <p>+92 330 6066708</p>
+          <p>+92 347 3941140</p>
         </div>
 
         <div className="footer-section">
@@ -53,7 +54,7 @@ const Footer = () => {
       </div>
 
       <div className="footer-bottom">
-        <p>Made with © 2025 IRFWARDROBE. All rights reserved.</p>
+        <p>Made with © 2025 IRF WARDROBE. All rights reserved.</p>
       </div>
     </footer>
   );

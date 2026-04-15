@@ -159,7 +159,7 @@ const About = () => {
           <p className="mission-text">
             Orders are processed Monday to Saturday and dispatched as quickly as possible.
             Delivery time varies by city, usually within 2 to 5 business days. For urgent inquiries,
-            call us at +92 316 4928847.
+            call us at +92 330 6066708 or +92 347 3941140.
           </p>
         </section>
 

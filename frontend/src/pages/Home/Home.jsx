@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { FaWhatsapp } from 'react-icons/fa';
 import { productsAPI } from '../../api/api';
 import ProductCard from '../../components/ProductCard/ProductCard';
 import Loader from '../../components/Loader/Loader';
@@ -90,6 +91,17 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      <a
+        className="whatsapp-float-btn"
+        href="https://wa.me/923306066708"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Chat on WhatsApp"
+        title="Chat on WhatsApp"
+      >
+        <FaWhatsapp aria-hidden="true" />
+      </a>
     </div>
   );
 };

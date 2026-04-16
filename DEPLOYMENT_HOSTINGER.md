@@ -84,7 +84,7 @@ Quick health check:
 
 ## 4) Post-deploy Checks
 
-- Open frontend domain and verify tab title shows `IRFWARDROBE`.
+- Open frontend domain and verify tab title shows `IRF WARDROBE`.
 - Verify login/register/products/cart flows.
 - Verify browser network calls target your backend domain (not localhost).
 - Verify backend CORS allows only configured origins.

@@ -31,6 +31,7 @@ const advertisements = [
 
 const AdTicker = () => {
   const [currentAd, setCurrentAd] = useState(0);
+  const [isAdAssetsReady, setIsAdAssetsReady] = useState(false);
   const navigate = useNavigate();
 
   const handleShopNow = () => {
@@ -44,20 +45,59 @@ const AdTicker = () => {
   };
 
   useEffect(() => {
+    let isMounted = true;
+
+    const preloadPromises = advertisements.map((ad) => (
+      new Promise((resolve) => {
+        const image = new Image();
+        image.src = ad.image;
+        image.onload = resolve;
+        image.onerror = resolve;
+      })
+    ));
+
+    Promise.all(preloadPromises).then(() => {
+      if (isMounted) {
+        setIsAdAssetsReady(true);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isAdAssetsReady) {
+      return undefined;
+    }
+
     const timer = setInterval(() => {
       setCurrentAd((prev) => (prev + 1) % advertisements.length);
     }, 4000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [isAdAssetsReady]);
+
+  if (!isAdAssetsReady) {
+    return (
+      <div className="ad-ticker">
+        <div className="ad-content ad-loading-state">
+          <p className="ad-loading-text">Loading promotions...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="ad-ticker">
       <div className="ad-content">
         <img
+          key={advertisements[currentAd].id}
           src={advertisements[currentAd].image}
           alt={advertisements[currentAd].title}
           className="ad-image"
+          loading="eager"
         />
         <div className="ad-overlay">
           <span className="ad-company">{advertisements[currentAd].company}</span>

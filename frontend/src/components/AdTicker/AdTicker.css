@@ -17,6 +17,20 @@
   overflow: hidden;
 }
 
+.ad-loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+}
+
+.ad-loading-text {
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
 .ad-image {
   width: 100%;
   height: 100%;

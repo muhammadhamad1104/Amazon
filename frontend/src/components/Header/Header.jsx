@@ -112,7 +112,7 @@ const Header = () => {
     <header className="header">
       <div className="header-container">
         <Link to="/" className="logo">
-          <img src="/logo2.jpeg" alt="IRFWARDROBE logo" className="logo-image" />
+          <img src="/logo2.jpeg" alt="IRF WARDROBE logo" className="logo-image" />
           <span className="logo-text">IRF WARDROBE</span>
         </Link>
 

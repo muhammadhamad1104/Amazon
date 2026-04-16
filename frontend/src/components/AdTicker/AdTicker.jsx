@@ -5,7 +5,7 @@ import './AdTicker.css';
 const advertisements = [
   {
     id: 1,
-    image: '/women-unstiched-cloth.jpeg',
+    image: '/women-unstiched-cloth.png',
     title: "Women's Unstitched Collection",
     subtitle: 'Fresh 2 Piece and 3 Piece arrivals for every occasion',
     company: 'IRF Wardrobe Signature Edit',
@@ -13,7 +13,7 @@ const advertisements = [
   },
   {
     id: 2,
-    image: '/kids-wear.jpeg',
+    image: '/kids-wear.png',
     title: 'Kids Wear Collection',
     subtitle: 'Comfortable everyday styles for boys and girls',
     company: 'IRF Wardrobe Kids',
@@ -21,7 +21,7 @@ const advertisements = [
   },
   {
     id: 3,
-    image: '/shoes.jpeg',
+    image: '/shoes.png',
     title: 'Thrifted Pre-Loved Shoes',
     subtitle: 'Curated quality pairs at standout prices',
     company: 'IRF Wardrobe Footwear',

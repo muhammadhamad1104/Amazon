@@ -42,9 +42,6 @@ const ProductCard = ({ product }) => {
         
         <div className="product-footer">
           <PriceDisplay product={product} showFromLabel />
-          {product.stock > 0 && product.stock < 10 && (
-            <span className="low-stock">Only {product.stock} left</span>
-          )}
         </div>
       </div>
     </Link>

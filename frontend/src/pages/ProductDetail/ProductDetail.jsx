@@ -229,7 +229,6 @@ const ProductDetail = () => {
   const activeSize = getDisplaySize(selectedSize, sizeOptions[0] || 'L');
   const sizeColors = getSizeColorsForProduct(product, activeSize);
   const activeColor = sizeColors.includes(selectedColor) ? selectedColor : (sizeColors[0] || '');
-  const selectedSizeStock = sizeStock[activeSize] || 0;
 
   return (
     <div className="product-detail-page">
@@ -286,7 +285,6 @@ const ProductDetail = () => {
             {totalStock > 0 ? (
               <>
                 <span className="in-stock">✓ In Stock</span>
-                <span className="size-stock-note">Size {activeSize}: {selectedSizeStock} color option(s)</span>
               </>
             ) : (
               <span className="out-of-stock">✕ Out of Stock</span>
@@ -320,7 +318,6 @@ const ProductDetail = () => {
                         onClick={() => setSelectedSize(size)}
                       >
                         {size}
-                        <span>{stockForSize}</span>
                       </button>
                     );
                   })}

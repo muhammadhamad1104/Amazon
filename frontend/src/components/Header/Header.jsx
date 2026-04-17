@@ -44,9 +44,9 @@ const Header = () => {
 
   const cartItemsCount = cart?.items?.reduce((acc, item) => acc + item.quantity, 0) || 0;
 
-  const handleRemoveFromCart = async (productId, size) => {
+  const handleRemoveFromCart = async (productId, size, color) => {
     try {
-      const { data } = await cartAPI.remove(productId, size);
+      const { data } = await cartAPI.remove(productId, size, color);
       setCart(data);
       toast.success('Item removed from cart');
     } catch (error) {
@@ -59,6 +59,7 @@ const Header = () => {
     setPendingRemoveItem({
       productId: item.product._id,
       size: getDisplaySize(item.size),
+      color: item.color || 'Default',
       name: item.product.name
     });
   };
@@ -67,7 +68,11 @@ const Header = () => {
 
   const handleConfirmRemove = async () => {
     if (!pendingRemoveItem?.productId) return;
-    await handleRemoveFromCart(pendingRemoveItem.productId, pendingRemoveItem.size);
+    await handleRemoveFromCart(
+      pendingRemoveItem.productId,
+      pendingRemoveItem.size,
+      pendingRemoveItem.color
+    );
     setPendingRemoveItem(null);
   };
 
@@ -210,11 +215,12 @@ const Header = () => {
                     </div>
                     <div className="cart-dropdown-items">
                       {cart.items.map((item) => (
-                        <div key={`${item.product._id}-${getDisplaySize(item.size)}`} className="cart-dropdown-item">
+                        <div key={`${item.product._id}-${getDisplaySize(item.size)}-${item.color || 'Default'}`} className="cart-dropdown-item">
                           <img src={resolveImageUrl(item.product.image)} alt={item.product.name} />
                           <div className="cart-item-info">
                             <h4>{item.product.name}</h4>
                             <p className="cart-item-size">Size: {getDisplaySize(item.size)}</p>
+                            <p className="cart-item-size">Color: {item.color || 'Default'}</p>
                             <div className="cart-item-price-line">
                               <PriceDisplay
                                 product={item.product}
@@ -285,7 +291,10 @@ const Header = () => {
                       <h4>Remove item?</h4>
                       <p>
                         Are you sure you want to remove {pendingRemoveItem.name ? <strong>{pendingRemoveItem.name}</strong> : 'this item'}
-                        {pendingRemoveItem.size ? ` (size ${pendingRemoveItem.size})` : ''} from your cart?
+                        {pendingRemoveItem.size ? ` (size ${pendingRemoveItem.size}` : ''}
+                        {pendingRemoveItem.color ? `, color ${pendingRemoveItem.color})` : pendingRemoveItem.size ? ')' : ''}
+                        {!pendingRemoveItem.size && pendingRemoveItem.color ? ` (color ${pendingRemoveItem.color})` : ''}
+                        {' '}from your cart?
                       </p>
                       <div className="confirm-actions">
                         <button className="btn-cancel" onClick={cancelRemove}>Cancel</button>

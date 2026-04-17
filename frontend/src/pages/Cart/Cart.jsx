@@ -7,7 +7,7 @@ import Loader from '../../components/Loader/Loader';
 import { toast } from 'react-toastify';
 import { formatPKR } from '../../utils/currency';
 import { resolveImageUrl } from '../../utils/media';
-import { getDisplaySize, getSizePricingForProduct, getSizeStockForProduct } from '../../utils/sizeStock';
+import { getDisplaySize, getSizePricingForProduct } from '../../utils/sizeStock';
 import PriceDisplay from '../../components/PriceDisplay/PriceDisplay';
 import './Cart.css';
 
@@ -40,11 +40,12 @@ const Cart = () => {
     }
   };
 
-  const updateQuantity = async (productId, size, newQuantity) => {
+  const updateQuantity = async (productId, size, color, newQuantity) => {
     try {
       const { data } = await cartAPI.update({
         productId,
         size,
+        color,
         quantity: newQuantity
       });
       setCart(data);
@@ -53,9 +54,9 @@ const Cart = () => {
     }
   };
 
-  const removeItem = async (productId, size) => {
+  const removeItem = async (productId, size, color) => {
     try {
-      const { data } = await cartAPI.remove(productId, size);
+      const { data } = await cartAPI.remove(productId, size, color);
       setCart(data);
       toast.success('Item removed from cart');
     } catch (error) {
@@ -68,6 +69,7 @@ const Cart = () => {
     setPendingRemove({
       id: item.product._id,
       size: getDisplaySize(item.size),
+      color: item.color || 'Default',
       name: item.product.name
     });
   };
@@ -76,7 +78,7 @@ const Cart = () => {
 
   const confirmRemove = async () => {
     if (!pendingRemove?.id) return;
-    await removeItem(pendingRemove.id, pendingRemove.size);
+    await removeItem(pendingRemove.id, pendingRemove.size, pendingRemove.color);
     setPendingRemove(null);
   };
 
@@ -137,11 +139,11 @@ const Cart = () => {
 
               {cart.items.map((item) => {
                 const itemSize = getDisplaySize(item.size);
-                const sizeStock = getSizeStockForProduct(item.product, itemSize);
+                const itemColor = item.color || 'Default';
                 const sizePricing = getSizePricingForProduct(item.product, itemSize);
 
                 return (
-                <div key={`${item.product?._id}-${itemSize}`} className="cart-item">
+                <div key={`${item.product?._id}-${itemSize}-${itemColor}`} className="cart-item">
                   <div className="item-product">
                     <Link to={`/product/${item.product?._id}`}>
                       <img src={resolveImageUrl(item.product?.image)} alt={item.product?.name} />
@@ -152,9 +154,7 @@ const Cart = () => {
                       </Link>
                       <p className="item-brand">{item.product?.brand}</p>
                       <p className="item-size">Size: {itemSize}</p>
-                      {sizeStock < 10 && (
-                        <p className="low-stock">Only {sizeStock} left in size {itemSize}!</p>
-                      )}
+                      <p className="item-size">Color: {itemColor}</p>
                     </div>
                   </div>
 
@@ -169,7 +169,7 @@ const Cart = () => {
 
                   <div className="item-quantity">
                     <button
-                      onClick={() => updateQuantity(item.product?._id, itemSize, item.quantity - 1)}
+                      onClick={() => updateQuantity(item.product?._id, itemSize, itemColor, item.quantity - 1)}
                       disabled={item.quantity <= 1}
                       className="qty-btn"
                     >
@@ -177,8 +177,7 @@ const Cart = () => {
                     </button>
                     <span className="qty-value">{item.quantity}</span>
                     <button
-                      onClick={() => updateQuantity(item.product?._id, itemSize, item.quantity + 1)}
-                      disabled={item.quantity >= sizeStock}
+                      onClick={() => updateQuantity(item.product?._id, itemSize, itemColor, item.quantity + 1)}
                       className="qty-btn"
                     >
                       <FaPlus />
@@ -251,7 +250,10 @@ const Cart = () => {
             <h4>Remove item?</h4>
             <p>
               Are you sure you want to remove {pendingRemove.name ? <strong>{pendingRemove.name}</strong> : 'this item'}
-              {pendingRemove.size ? ` (size ${pendingRemove.size})` : ''} from your cart?
+              {pendingRemove.size ? ` (size ${pendingRemove.size}` : ''}
+              {pendingRemove.color ? `, color ${pendingRemove.color})` : pendingRemove.size ? ')' : ''}
+              {!pendingRemove.size && pendingRemove.color ? ` (color ${pendingRemove.color})` : ''}
+              {' '}from your cart?
             </p>
             <div className="confirm-actions">
               <button className="btn-cancel" onClick={cancelRemove}>Cancel</button>

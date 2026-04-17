@@ -12,6 +12,8 @@ export const DEFAULT_SIZE_OPTIONS = [
   '3 PIECE'
 ];
 
+export const DEFAULT_VARIANT_COLOR = 'Default';
+
 const LETTER_SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
 const toPlainObject = (value) => {
@@ -46,6 +48,32 @@ const normalizePriceValue = (value) => {
 
 export const normalizeSizeLabel = (value) => String(value ?? '').trim().toUpperCase();
 
+export const normalizeColorLabel = (value) => String(value ?? '').trim();
+
+const normalizeColorKey = (value) => normalizeColorLabel(value).toLowerCase();
+
+export const normalizeColorList = (value) => {
+  const source = Array.isArray(value)
+    ? value
+    : (typeof value === 'string' ? value.split(',') : []);
+
+  const seen = new Set();
+  const normalized = [];
+
+  source.forEach((rawColor) => {
+    const color = normalizeColorLabel(rawColor);
+    if (!color) return;
+
+    const colorKey = normalizeColorKey(color);
+    if (seen.has(colorKey)) return;
+
+    seen.add(colorKey);
+    normalized.push(color);
+  });
+
+  return normalized;
+};
+
 export const normalizeSizeStock = (sizeStock = {}, fallbackStock = 0) => {
   const normalized = {};
 
@@ -65,6 +93,33 @@ export const normalizeSizeStock = (sizeStock = {}, fallbackStock = 0) => {
   }
 
   return normalized;
+};
+
+const normalizeVariantColors = (variant = {}, fallbackQuantity = 0) => {
+  const colors = normalizeColorList(
+    variant.colors ?? variant.color ?? variant.colours
+  );
+
+  if (colors.length > 0) {
+    return colors;
+  }
+
+  if (normalizeStockQuantity(fallbackQuantity) > 0) {
+    return [DEFAULT_VARIANT_COLOR];
+  }
+
+  return [];
+};
+
+const normalizeVariantQuantity = (variant = {}, colors = []) => {
+  const rawQuantity = variant.quantity ?? variant.stock ?? variant.qty;
+  const quantity = normalizeStockQuantity(rawQuantity);
+
+  if (quantity > 0) {
+    return quantity;
+  }
+
+  return colors.length;
 };
 
 export const normalizeSizePricingMap = (
@@ -91,8 +146,13 @@ export const normalizeSizePricingMap = (
       ? rawVariant
       : { quantity: rawVariant };
 
-    const quantity = normalizeStockQuantity(variant.quantity ?? variant.stock ?? variant.qty);
-    if (quantity <= 0) return;
+    const colors = normalizeVariantColors(
+      variant,
+      variant.quantity ?? variant.stock ?? variant.qty
+    );
+
+    const quantity = normalizeVariantQuantity(variant, colors);
+    if (quantity <= 0 && colors.length === 0) return;
 
     let price = normalizePriceValue(
       variant.price ?? normalizedFallbackPrice ?? normalizedFallbackOriginalPrice
@@ -112,8 +172,17 @@ export const normalizeSizePricingMap = (
 
     if (price <= 0 || originalPrice <= 0) return;
 
+    const normalizedColors = colors.length > 0
+      ? colors
+      : [DEFAULT_VARIANT_COLOR];
+
+    const normalizedQuantity = quantity > 0
+      ? quantity
+      : normalizedColors.length;
+
     normalized[size] = {
-      quantity,
+      colors: normalizedColors,
+      quantity: normalizedQuantity,
       price,
       originalPrice
     };
@@ -132,6 +201,7 @@ export const normalizeSizePricingMap = (
     if (quantity <= 0 || price <= 0 || originalPrice <= 0) return;
 
     normalized[size] = {
+      colors: normalizeVariantColors({}, quantity),
       quantity,
       price,
       originalPrice
@@ -195,7 +265,8 @@ export const getProductSizeStockMap = (product) => {
 
   if (Object.keys(sizePricingMap).length > 0) {
     return Object.entries(sizePricingMap).reduce((accumulator, [size, variant]) => {
-      accumulator[size] = normalizeStockQuantity(variant.quantity);
+      const colors = normalizeVariantColors(variant, variant.quantity ?? variant.stock ?? variant.qty);
+      accumulator[size] = normalizeVariantQuantity(variant, colors);
       return accumulator;
     }, {});
   }
@@ -222,12 +293,19 @@ export const getSizePricingForProduct = (product, size) => {
   const availableSizes = sortSizeKeys(Object.keys(sizePricingMap));
 
   if (normalizedSize && sizePricingMap[normalizedSize]) {
+    const selectedVariant = sizePricingMap[normalizedSize] || {};
+    const selectedColors = normalizeVariantColors(
+      selectedVariant,
+      selectedVariant.quantity ?? selectedVariant.stock ?? selectedVariant.qty
+    );
+
     return {
       size: normalizedSize,
-      quantity: normalizeStockQuantity(sizePricingMap[normalizedSize].quantity),
-      price: normalizePriceValue(sizePricingMap[normalizedSize].price),
+      colors: selectedColors,
+      quantity: normalizeVariantQuantity(selectedVariant, selectedColors),
+      price: normalizePriceValue(selectedVariant.price),
       originalPrice: normalizePriceValue(
-        sizePricingMap[normalizedSize].originalPrice || sizePricingMap[normalizedSize].price
+        selectedVariant.originalPrice || selectedVariant.price
       )
     };
   }
@@ -235,10 +313,15 @@ export const getSizePricingForProduct = (product, size) => {
   if (availableSizes.length > 0) {
     const firstSize = availableSizes[0];
     const firstVariant = sizePricingMap[firstSize];
+    const firstColors = normalizeVariantColors(
+      firstVariant,
+      firstVariant.quantity ?? firstVariant.stock ?? firstVariant.qty
+    );
 
     return {
       size: firstSize,
-      quantity: normalizeStockQuantity(firstVariant.quantity),
+      colors: firstColors,
+      quantity: normalizeVariantQuantity(firstVariant, firstColors),
       price: normalizePriceValue(firstVariant.price),
       originalPrice: normalizePriceValue(firstVariant.originalPrice || firstVariant.price)
     };
@@ -249,6 +332,7 @@ export const getSizePricingForProduct = (product, size) => {
 
   return {
     size: normalizedSize || 'L',
+    colors: [],
     quantity: 0,
     price: fallbackPrice || fallbackOriginalPrice,
     originalPrice: fallbackOriginalPrice || fallbackPrice
@@ -257,4 +341,17 @@ export const getSizePricingForProduct = (product, size) => {
 
 export const getSizeStockForProduct = (product, size) => {
   return normalizeStockQuantity(getSizePricingForProduct(product, size).quantity);
+};
+
+export const getSizeColorsForProduct = (product, size) => {
+  const sizePricing = getSizePricingForProduct(product, size);
+  return normalizeColorList(sizePricing.colors);
+};
+
+export const isColorAvailableForProduct = (product, size, color) => {
+  const normalizedColor = normalizeColorLabel(color);
+  if (!normalizedColor) return false;
+
+  const availableColors = getSizeColorsForProduct(product, size);
+  return availableColors.some((candidate) => normalizeColorKey(candidate) === normalizeColorKey(normalizedColor));
 };

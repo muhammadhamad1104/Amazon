@@ -252,6 +252,41 @@
   color: #131921;
 }
 
+.image-url-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.image-url-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+}
+
+.add-image-url-btn,
+.remove-image-url-btn {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f2937;
+  padding: 0.55rem 0.8rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.add-image-url-btn:hover,
+.remove-image-url-btn:hover:not(:disabled) {
+  border-color: #ff9900;
+  color: #b45309;
+  background: #fff7ec;
+}
+
+.remove-image-url-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .image-preview {
   margin-top: 1rem;
   text-align: center;
@@ -263,6 +298,21 @@
   border-radius: 8px;
   border: 2px solid #e0e0e0;
   object-fit: cover;
+}
+
+.image-preview-grid {
+  margin-top: 0.9rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 0.6rem;
+}
+
+.image-preview-grid img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #e0e0e0;
 }
 
 .checkbox-field {
@@ -394,6 +444,10 @@
 
   .custom-size-row {
     flex-direction: column;
+  }
+
+  .image-url-row {
+    grid-template-columns: 1fr;
   }
 
   .add-size-btn {

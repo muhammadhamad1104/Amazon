@@ -83,7 +83,9 @@ export const cartAPI = {
   get: () => api.get('/cart'),
   add: (data) => api.post('/cart/add', data),
   update: (data) => api.put('/cart/update', data),
-  remove: (productId, size) => api.delete(`/cart/remove/${productId}`, size ? { params: { size } } : undefined),
+  remove: (productId, size, color) => api.delete(`/cart/remove/${productId}`, (size || color)
+    ? { params: { ...(size ? { size } : {}), ...(color ? { color } : {}) } }
+    : undefined),
   clear: () => api.delete('/cart/clear')
 };
 

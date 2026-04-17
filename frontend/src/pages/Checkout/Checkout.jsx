@@ -70,6 +70,7 @@ const Checkout = () => {
           price: sizePricing.price,
           quantity: item.quantity,
           size: itemSize,
+          color: item.color || 'Default',
           image: item.product.image
         };
       });
@@ -190,11 +191,12 @@ const Checkout = () => {
               <h2>Order Items</h2>
               <div className="order-items">
                 {cart?.items?.map(item => (
-                  <div key={`${item.product._id}-${getDisplaySize(item.size)}`} className="order-item">
+                  <div key={`${item.product._id}-${getDisplaySize(item.size)}-${item.color || 'Default'}`} className="order-item">
                     <img src={resolveImageUrl(item.product.image)} alt={item.product.name} />
                     <div className="order-item-info">
                       <h3>{item.product.name}</h3>
                       <p>Size: {getDisplaySize(item.size)}</p>
+                      <p>Color: {item.color || 'Default'}</p>
                       <p>Quantity: {item.quantity}</p>
                       <PriceDisplay
                         product={item.product}

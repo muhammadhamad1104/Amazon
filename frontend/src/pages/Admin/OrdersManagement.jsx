@@ -31,11 +31,13 @@ const getOrderStatusClass = (status) => {
 const getOrderSizeQuantityBreakdown = (order) => {
   const sizeTotals = (order?.items || []).reduce((accumulator, item) => {
     const size = getDisplaySize(item?.size, 'N/A');
+    const color = String(item?.color || 'Default').trim() || 'Default';
     const quantity = Math.max(0, Math.floor(Number(item?.quantity || 0)));
 
     if (quantity <= 0) return accumulator;
 
-    accumulator[size] = (accumulator[size] || 0) + quantity;
+    const variantKey = `${size} / ${color}`;
+    accumulator[variantKey] = (accumulator[variantKey] || 0) + quantity;
     return accumulator;
   }, {});
 

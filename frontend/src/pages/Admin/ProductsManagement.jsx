@@ -6,7 +6,7 @@ import Loader from '../../components/Loader/Loader';
 import ProductFormModal from './ProductFormModal';
 import { formatCategoryLabel } from '../../constants/productCategories';
 import { resolveImageUrl } from '../../utils/media';
-import { normalizeSizeStock, sortSizeKeys } from '../../utils/sizeStock';
+import { normalizeSizePricingMap, sortSizeKeys } from '../../utils/sizeStock';
 import PriceDisplay from '../../components/PriceDisplay/PriceDisplay';
 import './ProductsManagement.css';
 
@@ -24,14 +24,23 @@ const ProductsManagement = () => {
   const observer = useRef();
 
   const getSizeStockSummary = (product) => {
-    const sizeStock = normalizeSizeStock(product?.sizeStock, product?.stock || 0);
-    const sizes = sortSizeKeys(Object.keys(sizeStock));
+    const sizePricingMap = normalizeSizePricingMap(
+      product?.sizePricing,
+      product?.sizeStock,
+      product?.price || 0,
+      product?.originalPrice || product?.price || 0
+    );
+
+    const sizes = sortSizeKeys(Object.keys(sizePricingMap));
 
     if (sizes.length === 0) {
-      return 'No size stock';
+      return 'No size variants';
     }
 
-    return sizes.map((size) => `${size}:${sizeStock[size]}`).join('  ');
+    return sizes.map((size) => {
+      const colors = sizePricingMap[size]?.colors || [];
+      return `${size}: ${colors.join(', ') || 'Default'}`;
+    }).join('  ');
   };
 
   useEffect(() => {

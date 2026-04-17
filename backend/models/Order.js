@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { normalizeSizeLabel } from '../utils/sizeStock.js';
+import { DEFAULT_VARIANT_COLOR, normalizeColorLabel, normalizeSizeLabel } from '../utils/sizeStock.js';
 
 const orderSchema = new mongoose.Schema({
   user: {
@@ -25,6 +25,15 @@ const orderSchema = new mongoose.Schema({
       minlength: 1,
       maxlength: 20,
       set: (value) => normalizeSizeLabel(value) || 'L'
+    },
+    color: {
+      type: String,
+      required: true,
+      default: DEFAULT_VARIANT_COLOR,
+      trim: true,
+      minlength: 1,
+      maxlength: 40,
+      set: (value) => normalizeColorLabel(value) || DEFAULT_VARIANT_COLOR
     },
     quantity: {
       type: Number,

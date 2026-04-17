@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import {
@@ -8,15 +8,27 @@ import {
 import { resolveImageUrl } from '../../utils/media';
 import {
   DEFAULT_SIZE_OPTIONS,
+  normalizeColorList,
   normalizeSizeLabel,
   normalizeSizePricingMap,
   sortSizeKeys
 } from '../../utils/sizeStock';
 import './ProductFormModal.css';
 
+const MAX_PRODUCT_IMAGES = 5;
+
 const createInitialSizePricing = () => ({});
 
 const createInitialSizeOptions = () => [...DEFAULT_SIZE_OPTIONS];
+
+const createInitialImageUrls = (product = null) => {
+  const normalizedImages = [...new Set([
+    ...(Array.isArray(product?.images) ? product.images : []),
+    product?.image
+  ].map((image) => String(image || '').trim()).filter(Boolean))].slice(0, MAX_PRODUCT_IMAGES);
+
+  return normalizedImages.length > 0 ? normalizedImages : [''];
+};
 
 const toEditableSizePricing = (product = null) => {
   const normalized = normalizeSizePricingMap(
@@ -26,11 +38,11 @@ const toEditableSizePricing = (product = null) => {
     product?.originalPrice || product?.price || 0
   );
 
-  return Object.entries(normalized).reduce((accumulator, [size, quantity]) => {
+  return Object.entries(normalized).reduce((accumulator, [size, variant]) => {
     accumulator[size] = {
-      quantity: String(quantity.quantity || 0),
-      originalPrice: String(quantity.originalPrice || 0),
-      price: String(quantity.price || 0)
+      colors: (variant.colors || []).join(', '),
+      originalPrice: String(variant.originalPrice || 0),
+      price: String(variant.price || 0)
     };
     return accumulator;
   }, {});
@@ -45,10 +57,18 @@ const getDefaultVariantPricing = (sizePricing = {}) => {
   const fallbackOriginalPrice = existingVariant?.originalPrice || fallbackPrice || '';
 
   return {
-    quantity: '1',
+    colors: '',
     originalPrice: String(fallbackOriginalPrice),
     price: String(fallbackPrice)
   };
+};
+
+const normalizeImageUrls = (urls = []) => {
+  return [...new Set(
+    urls
+      .map((url) => String(url || '').trim())
+      .filter(Boolean)
+  )].slice(0, MAX_PRODUCT_IMAGES);
 };
 
 const ProductFormModal = ({ product, onSave, onClose }) => {
@@ -59,12 +79,12 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
     category: '',
     subcategory: '',
     sizePricing: createInitialSizePricing(),
-    image: '',
+    imageUrls: [''],
     featured: false
   });
   const [imageMode, setImageMode] = useState('url');
-  const [imageFile, setImageFile] = useState(null);
-  const [filePreview, setFilePreview] = useState('');
+  const [imageFiles, setImageFiles] = useState([]);
+  const [filePreviews, setFilePreviews] = useState([]);
   const [sizeOptions, setSizeOptions] = useState(createInitialSizeOptions());
   const [newSizeInput, setNewSizeInput] = useState('');
   const [saving, setSaving] = useState(false);
@@ -74,11 +94,9 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
 
   useEffect(() => {
     return () => {
-      if (filePreview) {
-        URL.revokeObjectURL(filePreview);
-      }
+      filePreviews.forEach((previewUrl) => URL.revokeObjectURL(previewUrl));
     };
-  }, [filePreview]);
+  }, [filePreviews]);
 
   useEffect(() => {
     if (product) {
@@ -95,14 +113,10 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
         category: product.category || '',
         subcategory: product.subcategory || '',
         sizePricing: editableSizePricing,
-        image: product.image || '',
+        imageUrls: createInitialImageUrls(product),
         featured: product.featured || false
       });
       setSizeOptions(productSizeOptions);
-      setNewSizeInput('');
-      setImageMode('url');
-      setImageFile(null);
-      setFilePreview('');
     } else {
       setFormData({
         name: '',
@@ -111,19 +125,20 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
         category: '',
         subcategory: '',
         sizePricing: createInitialSizePricing(),
-        image: '',
+        imageUrls: [''],
         featured: false
       });
       setSizeOptions(createInitialSizeOptions());
-      setNewSizeInput('');
-      setImageMode('url');
-      setImageFile(null);
-      setFilePreview('');
     }
+
+    setNewSizeInput('');
+    setImageMode('url');
+    setImageFiles([]);
+    setFilePreviews([]);
   }, [product]);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target;
 
     if (name === 'category') {
       setFormData((prev) => ({
@@ -140,45 +155,85 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
     }));
   };
 
+  const clearSelectedImageFiles = () => {
+    filePreviews.forEach((previewUrl) => URL.revokeObjectURL(previewUrl));
+    setImageFiles([]);
+    setFilePreviews([]);
+  };
+
   const handleImageModeChange = (mode) => {
     setImageMode(mode);
+
     if (mode === 'url') {
-      setImageFile(null);
-      if (filePreview) {
-        URL.revokeObjectURL(filePreview);
-        setFilePreview('');
-      }
+      clearSelectedImageFiles();
     }
   };
 
-  const handleImageFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) {
-      setImageFile(null);
-      if (filePreview) {
-        URL.revokeObjectURL(filePreview);
-        setFilePreview('');
+  const handleImageFilesChange = (event) => {
+    const nextFiles = Array.from(event.target.files || []);
+
+    if (nextFiles.length === 0) {
+      clearSelectedImageFiles();
+      return;
+    }
+
+    if (nextFiles.length > MAX_PRODUCT_IMAGES) {
+      toast.error(`You can upload maximum ${MAX_PRODUCT_IMAGES} images`);
+      return;
+    }
+
+    for (const file of nextFiles) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select valid image files only');
+        return;
       }
-      return;
+
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Each image must be 5MB or smaller');
+        return;
+      }
     }
 
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select a valid image file');
-      return;
-    }
+    clearSelectedImageFiles();
+    setImageFiles(nextFiles);
+    setFilePreviews(nextFiles.map((file) => URL.createObjectURL(file)));
+  };
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be 5MB or smaller');
-      return;
-    }
+  const handleImageUrlChange = (index, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      imageUrls: prev.imageUrls.map((url, urlIndex) => (urlIndex === index ? value : url))
+    }));
+  };
 
-    if (filePreview) {
-      URL.revokeObjectURL(filePreview);
-    }
+  const addImageUrlField = () => {
+    setFormData((prev) => {
+      if (prev.imageUrls.length >= MAX_PRODUCT_IMAGES) {
+        toast.error(`You can add maximum ${MAX_PRODUCT_IMAGES} image URLs`);
+        return prev;
+      }
 
-    const objectUrl = URL.createObjectURL(file);
-    setFilePreview(objectUrl);
-    setImageFile(file);
+      return {
+        ...prev,
+        imageUrls: [...prev.imageUrls, '']
+      };
+    });
+  };
+
+  const removeImageUrlField = (index) => {
+    setFormData((prev) => {
+      if (prev.imageUrls.length <= 1) {
+        return {
+          ...prev,
+          imageUrls: ['']
+        };
+      }
+
+      return {
+        ...prev,
+        imageUrls: prev.imageUrls.filter((_, urlIndex) => urlIndex !== index)
+      };
+    });
   };
 
   const selectedSizes = sortSizeKeys(Object.keys(formData.sizePricing || {}));
@@ -247,13 +302,10 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
     setFormData((prev) => {
       const currentVariant = prev.sizePricing?.[normalizedSize] || getDefaultVariantPricing(prev.sizePricing || {});
       const currentValue = currentVariant[field] ?? '';
-      let normalizedValue = currentValue;
 
-      if (field === 'quantity') {
-        const parsedQuantity = Math.floor(Number(currentValue));
-        normalizedValue = Number.isFinite(parsedQuantity) && parsedQuantity > 0
-          ? String(parsedQuantity)
-          : '1';
+      let normalizedValue = currentValue;
+      if (field === 'colors') {
+        normalizedValue = normalizeColorList(currentValue).join(', ');
       } else {
         const parsedPrice = Number(currentValue);
         normalizedValue = Number.isFinite(parsedPrice) && parsedPrice > 0
@@ -274,27 +326,13 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
     });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
     const activeSizes = sortSizeKeys(Object.keys(formData.sizePricing || {}));
 
-    const hasImageUrl = formData.image.trim().length > 0;
-    const hasImageFile = Boolean(imageFile);
-    const hasExistingImage = Boolean(product?.image);
-
-    if (imageMode === 'url' && !hasImageUrl && !hasExistingImage) {
-      toast.error('Please provide an image URL');
-      return;
-    }
-
-    if (imageMode === 'file' && !hasImageFile && !hasExistingImage) {
-      toast.error('Please upload an image file');
-      return;
-    }
-
     if (activeSizes.length === 0) {
-      toast.error('Select at least one size and set its quantity');
+      toast.error('Select at least one size and add colors for it');
       return;
     }
 
@@ -302,12 +340,12 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
 
     for (const size of activeSizes) {
       const sizeVariant = formData.sizePricing?.[size] || {};
-      const parsedQuantity = Math.floor(Number(sizeVariant.quantity || 0));
+      const parsedColors = normalizeColorList(sizeVariant.colors || '');
       const parsedOriginalPrice = Number(sizeVariant.originalPrice || 0);
       const parsedNewPrice = Number(sizeVariant.price || 0);
 
-      if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
-        toast.error(`Please enter a quantity greater than 0 for size ${size}`);
+      if (parsedColors.length === 0) {
+        toast.error(`Please add at least one color for size ${size}`);
         return;
       }
 
@@ -322,20 +360,36 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
       }
 
       sizePricingPayload[size] = {
-        quantity: parsedQuantity,
+        colors: parsedColors,
+        // Quantity is auto-derived from colors for backward compatibility.
+        quantity: parsedColors.length,
         originalPrice: parsedOriginalPrice,
         price: parsedNewPrice
       };
     }
 
-    const totalStock = Object.values(sizePricingPayload).reduce(
-      (sum, value) => sum + value.quantity,
-      0
-    );
-
     const displayVariant = Object.values(sizePricingPayload).reduce((current, candidate) => (
       !current || candidate.price < current.price ? candidate : current
     ), null);
+
+    const totalStock = Object.values(sizePricingPayload).reduce(
+      (sum, variant) => sum + variant.colors.length,
+      0
+    );
+
+    const normalizedImageUrls = normalizeImageUrls(formData.imageUrls || []);
+    const selectedFilesCount = imageFiles.length;
+    const requestedImageCount = normalizedImageUrls.length + selectedFilesCount;
+
+    if (requestedImageCount === 0) {
+      toast.error('Please add at least one product image');
+      return;
+    }
+
+    if (requestedImageCount > MAX_PRODUCT_IMAGES) {
+      toast.error(`Maximum ${MAX_PRODUCT_IMAGES} images are allowed`);
+      return;
+    }
 
     const payload = new FormData();
     payload.append('name', formData.name.trim());
@@ -345,20 +399,21 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
     payload.append('subcategory', formData.subcategory || '');
     payload.append('sizePricing', JSON.stringify(sizePricingPayload));
     payload.append('sizeStock', JSON.stringify(Object.fromEntries(
-      Object.entries(sizePricingPayload).map(([size, variant]) => [size, variant.quantity])
+      Object.entries(sizePricingPayload).map(([size, variant]) => [size, variant.colors.length])
     )));
     payload.append('price', String(displayVariant?.price || 0));
     payload.append('originalPrice', String(displayVariant?.originalPrice || displayVariant?.price || 0));
     payload.append('stock', String(totalStock));
     payload.append('featured', String(Boolean(formData.featured)));
+    payload.append('imageUrls', JSON.stringify(normalizedImageUrls));
 
-    if (imageMode === 'url' && hasImageUrl) {
-      payload.append('imageUrl', formData.image.trim());
+    if (normalizedImageUrls.length > 0) {
+      payload.append('imageUrl', normalizedImageUrls[0]);
     }
 
-    if (imageMode === 'file' && hasImageFile) {
-      payload.append('imageFile', imageFile);
-    }
+    imageFiles.forEach((file) => {
+      payload.append('imageFiles', file);
+    });
 
     setSaving(true);
     try {
@@ -370,9 +425,14 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
     }
   };
 
+  const activeImageUrls = normalizeImageUrls(formData.imageUrls || []);
+  const previewImages = filePreviews.length > 0
+    ? filePreviews
+    : activeImageUrls.map((url) => resolveImageUrl(url)).filter(Boolean);
+
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="product-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="product-modal" onClick={(event) => event.stopPropagation()}>
         <div className="modal-header">
           <h2>{product ? 'Edit Product' : 'Add New Product'}</h2>
           <button className="close-btn" onClick={onClose}>
@@ -433,9 +493,9 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
                 required
               >
                 <option value="">Select category</option>
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
                   </option>
                 ))}
               </select>
@@ -454,9 +514,9 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
                 <option value="">
                   {subcategories.length > 0 ? 'Select subcategory' : 'No subcategory required'}
                 </option>
-                {subcategories.map((subcat) => (
-                  <option key={subcat} value={subcat}>
-                    {subcat}
+                {subcategories.map((subcategory) => (
+                  <option key={subcategory} value={subcategory}>
+                    {subcategory}
                   </option>
                 ))}
               </select>
@@ -464,7 +524,7 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
           </div>
 
           <div className="form-field">
-            <label>Sizes, Quantity and Pricing *</label>
+            <label>Sizes, Colors and Pricing *</label>
             <div className="size-selector-grid">
               {sizeOptions.map((size) => {
                 const isSelected = selectedSizes.includes(size);
@@ -499,15 +559,13 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
                   <div key={size} className="size-stock-field">
                     <span>{size}</span>
                     <label className="size-metric-group">
-                      <small>Quantity</small>
+                      <small>Colors</small>
                       <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={formData.sizePricing?.[size]?.quantity || ''}
-                        onChange={(event) => handleSizePricingChange(size, 'quantity', event.target.value)}
-                        onBlur={() => handleSizePricingBlur(size, 'quantity')}
-                        placeholder="Qty"
+                        type="text"
+                        value={formData.sizePricing?.[size]?.colors || ''}
+                        onChange={(event) => handleSizePricingChange(size, 'colors', event.target.value)}
+                        onBlur={() => handleSizePricingBlur(size, 'colors')}
+                        placeholder="Red, Green, Blue"
                         required
                       />
                     </label>
@@ -545,15 +603,15 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
             )}
 
             <p className="size-stock-total">
-              Total stock: {selectedSizes.reduce(
-                (sum, size) => sum + Math.max(0, Math.floor(Number(formData.sizePricing?.[size]?.quantity || 0))),
+              Total colors across sizes: {selectedSizes.reduce(
+                (sum, size) => sum + normalizeColorList(formData.sizePricing?.[size]?.colors || '').length,
                 0
               )}
             </p>
           </div>
 
           <div className="form-field">
-            <label>Product Image *</label>
+            <label>Product Images (max {MAX_PRODUCT_IMAGES}) *</label>
             <div className="image-mode-toggle">
               <label className="mode-option">
                 <input
@@ -563,7 +621,7 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
                   checked={imageMode === 'url'}
                   onChange={() => handleImageModeChange('url')}
                 />
-                <span>Image URL</span>
+                <span>Image URLs</span>
               </label>
               <label className="mode-option">
                 <input
@@ -573,32 +631,59 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
                   checked={imageMode === 'file'}
                   onChange={() => handleImageModeChange('file')}
                 />
-                <span>Upload Image</span>
+                <span>Upload Images</span>
               </label>
             </div>
 
             {imageMode === 'url' ? (
-              <input
-                type="url"
-                id="image"
-                name="image"
-                value={formData.image}
-                onChange={handleChange}
-                placeholder="https://example.com/image.jpg"
-              />
+              <div className="image-url-list">
+                {formData.imageUrls.map((url, index) => (
+                  <div key={`image-url-${index}`} className="image-url-row">
+                    <input
+                      type="url"
+                      value={url}
+                      onChange={(event) => handleImageUrlChange(index, event.target.value)}
+                      placeholder={`https://example.com/image-${index + 1}.jpg`}
+                    />
+                    <button
+                      type="button"
+                      className="remove-image-url-btn"
+                      onClick={() => removeImageUrlField(index)}
+                      disabled={formData.imageUrls.length <= 1}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="add-image-url-btn"
+                  onClick={addImageUrlField}
+                  disabled={formData.imageUrls.length >= MAX_PRODUCT_IMAGES}
+                >
+                  Add Image URL
+                </button>
+              </div>
             ) : (
               <input
                 type="file"
-                id="imageFile"
-                name="imageFile"
+                id="imageFiles"
+                name="imageFiles"
                 accept="image/*"
-                onChange={handleImageFileChange}
+                multiple
+                onChange={handleImageFilesChange}
               />
             )}
 
-            {(formData.image || filePreview || product?.image) && (
-              <div className="image-preview">
-                <img src={resolveImageUrl(filePreview || formData.image || product?.image)} alt="Preview" />
+            {previewImages.length > 0 && (
+              <div className="image-preview-grid">
+                {previewImages.map((image, index) => (
+                  <img
+                    key={`preview-${index}`}
+                    src={image}
+                    alt={`Preview ${index + 1}`}
+                  />
+                ))}
               </div>
             )}
           </div>

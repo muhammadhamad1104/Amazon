@@ -12,6 +12,8 @@ export const DEFAULT_PRODUCT_SIZE_OPTIONS = [
   '3 PIECE'
 ];
 
+export const DEFAULT_VARIANT_COLOR = 'Default';
+
 const toPlainObject = (value) => {
   if (!value) return {};
 
@@ -48,6 +50,32 @@ export const normalizePriceValue = (value) => {
 
 export const normalizeSizeLabel = (value) => String(value ?? '').trim().toUpperCase();
 
+export const normalizeColorLabel = (value) => String(value ?? '').trim();
+
+const normalizeColorKey = (value) => normalizeColorLabel(value).toLowerCase();
+
+export const normalizeColorList = (value) => {
+  const source = Array.isArray(value)
+    ? value
+    : (typeof value === 'string' ? value.split(',') : []);
+
+  const seen = new Set();
+  const normalized = [];
+
+  source.forEach((rawColor) => {
+    const color = normalizeColorLabel(rawColor);
+    if (!color) return;
+
+    const colorKey = normalizeColorKey(color);
+    if (seen.has(colorKey)) return;
+
+    seen.add(colorKey);
+    normalized.push(color);
+  });
+
+  return normalized;
+};
+
 export const normalizeSizeStockMap = (sizeStock = {}, fallbackStock = 0) => {
   const rawSizeStock = toPlainObject(sizeStock);
   const normalized = {};
@@ -68,6 +96,33 @@ export const normalizeSizeStockMap = (sizeStock = {}, fallbackStock = 0) => {
   }
 
   return normalized;
+};
+
+const normalizeVariantQuantity = (variant = {}, normalizedColors = []) => {
+  const rawQuantity = variant.quantity ?? variant.stock ?? variant.qty;
+  const parsedQuantity = normalizeStockQuantity(rawQuantity);
+
+  if (parsedQuantity > 0) {
+    return parsedQuantity;
+  }
+
+  return normalizedColors.length;
+};
+
+const normalizeVariantColors = (variant = {}, fallbackQuantity = 0) => {
+  const normalizedColors = normalizeColorList(
+    variant.colors ?? variant.color ?? variant.colours
+  );
+
+  if (normalizedColors.length > 0) {
+    return normalizedColors;
+  }
+
+  if (normalizeStockQuantity(fallbackQuantity) > 0) {
+    return [DEFAULT_VARIANT_COLOR];
+  }
+
+  return [];
 };
 
 export const normalizeSizePricingMap = (
@@ -94,11 +149,13 @@ export const normalizeSizePricingMap = (
       ? rawVariant
       : { quantity: rawVariant };
 
-    const quantity = normalizeStockQuantity(
+    const colors = normalizeVariantColors(
+      variant,
       variant.quantity ?? variant.stock ?? variant.qty
     );
 
-    if (quantity <= 0) return;
+    const quantity = normalizeVariantQuantity(variant, colors);
+    if (quantity <= 0 && colors.length === 0) return;
 
     let price = normalizePriceValue(
       variant.price ?? normalizedFallbackPrice ?? normalizedFallbackOriginalPrice
@@ -122,8 +179,17 @@ export const normalizeSizePricingMap = (
 
     if (price <= 0 || originalPrice <= 0) return;
 
+    const normalizedColors = colors.length > 0
+      ? colors
+      : [DEFAULT_VARIANT_COLOR];
+
+    const normalizedQuantity = quantity > 0
+      ? quantity
+      : normalizedColors.length;
+
     normalized[normalizedSize] = {
-      quantity,
+      colors: normalizedColors,
+      quantity: normalizedQuantity,
       price,
       originalPrice
     };
@@ -141,7 +207,10 @@ export const normalizeSizePricingMap = (
 
     if (quantity <= 0 || price <= 0 || originalPrice <= 0) return;
 
+    const fallbackColors = normalizeVariantColors({}, quantity);
+
     normalized[size] = {
+      colors: fallbackColors,
       quantity,
       price,
       originalPrice
@@ -164,9 +233,12 @@ export const deriveSizeStockFromSizePricing = (sizePricing = {}) => {
       ? rawVariant
       : { quantity: rawVariant };
 
-    const quantity = normalizeStockQuantity(
+    const colors = normalizeVariantColors(
+      variant,
       variant.quantity ?? variant.stock ?? variant.qty
     );
+
+    const quantity = normalizeVariantQuantity(variant, colors);
 
     if (quantity <= 0) return accumulator;
 
@@ -231,22 +303,42 @@ export const getSizePricingForProduct = (product, size) => {
   const normalizedSize = normalizeSizeLabel(size);
 
   if (normalizedSize && normalizedSizePricing[normalizedSize]) {
+    const variant = normalizedSizePricing[normalizedSize] || {};
+    const colors = normalizeVariantColors(
+      variant,
+      variant.quantity ?? variant.stock ?? variant.qty
+    );
+
+    const quantity = normalizeVariantQuantity(variant, colors);
+
     return {
       size: normalizedSize,
-      ...normalizedSizePricing[normalizedSize]
+      colors,
+      quantity,
+      price: normalizePriceValue(variant.price),
+      originalPrice: normalizePriceValue(variant.originalPrice || variant.price)
     };
   }
 
   const fallbackSize = sizeOptions[0] || normalizedSize || 'L';
   const fallbackVariant = normalizedSizePricing[fallbackSize] || {
+    colors: [],
     quantity: 0,
     price: normalizePriceValue(product?.price || 0),
     originalPrice: normalizePriceValue(product?.originalPrice || product?.price || 0)
   };
 
+  const fallbackColors = normalizeVariantColors(
+    fallbackVariant,
+    fallbackVariant.quantity ?? fallbackVariant.stock ?? fallbackVariant.qty
+  );
+
+  const fallbackQuantity = normalizeVariantQuantity(fallbackVariant, fallbackColors);
+
   return {
     size: fallbackSize,
-    quantity: normalizeStockQuantity(fallbackVariant.quantity),
+    colors: fallbackColors,
+    quantity: fallbackQuantity,
     price: normalizePriceValue(fallbackVariant.price),
     originalPrice: normalizePriceValue(fallbackVariant.originalPrice || fallbackVariant.price)
   };
@@ -254,6 +346,19 @@ export const getSizePricingForProduct = (product, size) => {
 
 export const getSizeStockForProduct = (product, size) => {
   return normalizeStockQuantity(getSizePricingForProduct(product, size).quantity);
+};
+
+export const getSizeColorsForProduct = (product, size) => {
+  const sizePricing = getSizePricingForProduct(product, size);
+  return normalizeColorList(sizePricing.colors);
+};
+
+export const isColorAvailableForProduct = (product, size, color) => {
+  const normalizedColor = normalizeColorLabel(color);
+  if (!normalizedColor) return false;
+
+  const availableColors = getSizeColorsForProduct(product, size);
+  return availableColors.some((candidate) => normalizeColorKey(candidate) === normalizeColorKey(normalizedColor));
 };
 
 export const getProductAvailableSizes = (product) => {

@@ -6,10 +6,13 @@ import Product from '../models/Product.js';
 import { protect, admin } from '../middleware/auth.js';
 import { getSmtpTransportConfig } from '../utils/smtpConfig.js';
 import {
+  DEFAULT_VARIANT_COLOR,
+  getProductAvailableSizes,
+  getSizeColorsForProduct,
   getSizePricingForProduct,
-  getSizeStockForProduct,
-  normalizeSizeLabel,
-  normalizeStockQuantity
+  isColorAvailableForProduct,
+  normalizeColorLabel,
+  normalizeSizeLabel
 } from '../utils/sizeStock.js';
 
 const router = express.Router();
@@ -20,34 +23,11 @@ const ORDER_STATUSES = ['Pending', 'Processing', 'Shipped', 'Received', 'Deliver
 const NON_CANCELLABLE_STATUSES = new Set(['Shipped', 'Received', 'Delivered', 'Cancelled']);
 
 const normalizeSize = (value) => normalizeSizeLabel(value);
+const normalizeColor = (value) => normalizeColorLabel(value) || DEFAULT_VARIANT_COLOR;
 
 const getDisplaySize = (value) => normalizeSize(value) || 'N/A';
 
-const setProductSizeStock = (product, size, quantity) => {
-  const normalizedSize = normalizeSize(size);
-  if (!normalizedSize) return;
-
-  const normalizedQuantity = normalizeStockQuantity(quantity);
-
-  if (product.sizeStock instanceof Map) {
-    if (normalizedQuantity > 0) {
-      product.sizeStock.set(normalizedSize, normalizedQuantity);
-    } else {
-      product.sizeStock.delete(normalizedSize);
-    }
-    return;
-  }
-
-  const currentSizeStock = product.sizeStock?.toObject ? product.sizeStock.toObject() : { ...(product.sizeStock || {}) };
-
-  if (normalizedQuantity > 0) {
-    currentSizeStock[normalizedSize] = normalizedQuantity;
-  } else {
-    delete currentSizeStock[normalizedSize];
-  }
-
-  product.sizeStock = currentSizeStock;
-};
+const getDisplayColor = (value) => normalizeColorLabel(value) || DEFAULT_VARIANT_COLOR;
 
 const hasMailConfig = () => (
   process.env.SMTP_HOST &&
@@ -58,11 +38,11 @@ const hasMailConfig = () => (
 const createTransporter = () => nodemailer.createTransport(getSmtpTransportConfig());
 
 const buildItemsHtml = (items = []) => items.map((item) => (
-  `<li>${item.name} - Size: ${getDisplaySize(item.size)} - Qty: ${item.quantity} - Rs ${Number(item.price || 0).toFixed(2)} each</li>`
+  `<li>${item.name} - Size: ${getDisplaySize(item.size)} - Color: ${getDisplayColor(item.color)} - Qty: ${item.quantity} - Rs ${Number(item.price || 0).toFixed(2)} each</li>`
 )).join('');
 
 const buildItemsText = (items = []) => items.map((item) => (
-  `- ${item.name} | Size: ${getDisplaySize(item.size)} | Qty: ${item.quantity} | Rs ${Number(item.price || 0).toFixed(2)} each`
+  `- ${item.name} | Size: ${getDisplaySize(item.size)} | Color: ${getDisplayColor(item.color)} | Qty: ${item.quantity} | Rs ${Number(item.price || 0).toFixed(2)} each`
 )).join('\n');
 
 const sendOrderPlacementNotifications = async ({ order, customerName, customerEmail }) => {
@@ -160,40 +140,42 @@ router.post('/', protect, async (req, res) => {
       product: item?.product,
       quantity: Math.floor(Number(item?.quantity || 0)),
       size: normalizeSize(item?.size),
+      color: normalizeColorLabel(item?.color),
       image: item?.image,
       name: item?.name
     }));
 
     const invalidItem = requestedItems.find((item) => (
-      !item.product || !item.size || item.quantity <= 0
+      !item.product || !item.size || !item.color || item.quantity <= 0
     ));
 
     if (invalidItem) {
-      return res.status(400).json({ message: 'Each order item must include valid product, size, and quantity' });
+      return res.status(400).json({ message: 'Each order item must include valid product, size, color, and quantity' });
     }
 
     const productIds = [...new Set(requestedItems.map((item) => item.product.toString()))];
     const products = await Product.find({ _id: { $in: productIds } });
     const productMap = new Map(products.map((product) => [product._id.toString(), product]));
 
-    const requestedByProductAndSize = new Map();
-    requestedItems.forEach((item) => {
-      const key = `${item.product.toString()}::${item.size}`;
-      requestedByProductAndSize.set(key, (requestedByProductAndSize.get(key) || 0) + item.quantity);
-    });
-
-    for (const [key, requestedQuantity] of requestedByProductAndSize.entries()) {
-      const [productId, size] = key.split('::');
-      const product = productMap.get(productId);
-
+    for (const item of requestedItems) {
+      const product = productMap.get(item.product.toString());
       if (!product) {
         return res.status(404).json({ message: 'One or more products are no longer available' });
       }
 
-      const availableSizeStock = getSizeStockForProduct(product, size);
-      if (availableSizeStock < requestedQuantity) {
+      const availableSizes = getProductAvailableSizes(product);
+      if (availableSizes.length > 0 && !availableSizes.includes(item.size)) {
         return res.status(400).json({
-          message: `Only ${availableSizeStock} item(s) available for ${product.name} size ${size}`
+          message: `Size ${item.size} is not available for ${product.name}. Available sizes: ${availableSizes.join(', ')}`
+        });
+      }
+
+      if (!isColorAvailableForProduct(product, item.size, item.color)) {
+        const availableColors = getSizeColorsForProduct(product, item.size);
+        return res.status(400).json({
+          message: availableColors.length > 0
+            ? `Color ${item.color} is not available for ${product.name} size ${item.size}. Available colors: ${availableColors.join(', ')}`
+            : `No colors are available for ${product.name} size ${item.size}`
         });
       }
     }
@@ -209,7 +191,8 @@ router.post('/', protect, async (req, res) => {
         originalPrice: Number(sizePricing.originalPrice || sizePricing.price || product.originalPrice || product.price || 0),
         quantity: item.quantity,
         image: item.image || product.image,
-        size: item.size
+        size: item.size,
+        color: normalizeColor(item.color)
       };
     });
 
@@ -230,28 +213,6 @@ router.post('/', protect, async (req, res) => {
     });
 
     const createdOrder = await order.save();
-
-    const deductionByProduct = new Map();
-    normalizedItems.forEach((item) => {
-      const productId = item.product.toString();
-      if (!deductionByProduct.has(productId)) {
-        deductionByProduct.set(productId, {});
-      }
-      const sizeMap = deductionByProduct.get(productId);
-      sizeMap[item.size] = (sizeMap[item.size] || 0) + item.quantity;
-    });
-
-    for (const [productId, sizeMap] of deductionByProduct.entries()) {
-      const product = productMap.get(productId);
-      if (!product) continue;
-
-      for (const [size, deductedQuantity] of Object.entries(sizeMap)) {
-        const currentSizeStock = getSizeStockForProduct(product, size);
-        setProductSizeStock(product, size, currentSizeStock - deductedQuantity);
-      }
-
-      await product.save();
-    }
 
     await Cart.findOneAndUpdate(
       { user: req.user._id },
@@ -432,16 +393,6 @@ router.put('/:id/cancel', protect, async (req, res) => {
 
     order.status = 'Cancelled';
     const updatedOrder = await order.save();
-
-    for (const item of order.items) {
-      const product = await Product.findById(item.product);
-      if (product) {
-        const normalizedSize = normalizeSize(item.size) || 'L';
-        const currentSizeStock = getSizeStockForProduct(product, normalizedSize);
-        setProductSizeStock(product, normalizedSize, currentSizeStock + item.quantity);
-        await product.save();
-      }
-    }
 
     res.json(updatedOrder);
   } catch (error) {

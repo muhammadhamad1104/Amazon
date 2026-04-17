@@ -42,20 +42,29 @@ const parseBoolean = (value) => {
   return undefined;
 };
 
+const parseJsonValue = (value) => {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return value;
+  }
+
+  try {
+    return JSON.parse(trimmedValue);
+  } catch {
+    return value;
+  }
+};
+
 const parseSizeStock = (value, fallbackStock = 0) => {
   if (value === undefined || value === null || value === '') {
     return null;
   }
 
-  let parsedValue = value;
-
-  if (typeof value === 'string') {
-    try {
-      parsedValue = JSON.parse(value);
-    } catch {
-      return null;
-    }
-  }
+  const parsedValue = parseJsonValue(value);
 
   if (!parsedValue || typeof parsedValue !== 'object' || Array.isArray(parsedValue)) {
     return null;
@@ -69,15 +78,7 @@ const parseSizePricing = (value, fallbackSizeStock = {}, fallbackPrice = 0, fall
     return null;
   }
 
-  let parsedValue = value;
-
-  if (typeof value === 'string') {
-    try {
-      parsedValue = JSON.parse(value);
-    } catch {
-      return null;
-    }
-  }
+  const parsedValue = parseJsonValue(value);
 
   if (!parsedValue || typeof parsedValue !== 'object' || Array.isArray(parsedValue)) {
     return null;
@@ -91,13 +92,68 @@ const parseSizePricing = (value, fallbackSizeStock = {}, fallbackPrice = 0, fall
   );
 };
 
-const buildUploadedImageUrl = (req, file) => {
-  if (!file) return '';
-  return `/uploads/${file.filename}`;
+const getUploadedFiles = (req) => {
+  const uploaded = [];
+
+  if (Array.isArray(req.files)) {
+    uploaded.push(...req.files);
+  } else if (req.files && typeof req.files === 'object') {
+    Object.values(req.files).forEach((fileGroup) => {
+      if (Array.isArray(fileGroup)) {
+        uploaded.push(...fileGroup);
+      }
+    });
+  }
+
+  if (req.file) {
+    uploaded.push(req.file);
+  }
+
+  return uploaded;
 };
 
-const normalizeProductPayload = (req) => {
-  const { body = {}, file } = req;
+const buildUploadedImageUrls = (req) => {
+  return getUploadedFiles(req)
+    .map((file) => (file?.filename ? `/uploads/${file.filename}` : ''))
+    .filter(Boolean)
+    .slice(0, 5);
+};
+
+const normalizeUniqueImages = (images = []) => {
+  return [...new Set(
+    images
+      .map((image) => toTrimmedString(image))
+      .filter(Boolean)
+  )].slice(0, 5);
+};
+
+const parseImageUrls = (value) => {
+  if (value === undefined || value === null || value === '') {
+    return [];
+  }
+
+  const rawValues = Array.isArray(value) ? value : [value];
+  const parsedImages = [];
+
+  rawValues.forEach((rawValue) => {
+    const parsedValue = parseJsonValue(rawValue);
+
+    if (Array.isArray(parsedValue)) {
+      parsedImages.push(...parsedValue);
+      return;
+    }
+
+    const normalizedValue = toTrimmedString(parsedValue);
+    if (normalizedValue) {
+      parsedImages.push(normalizedValue);
+    }
+  });
+
+  return normalizeUniqueImages(parsedImages);
+};
+
+const normalizeProductPayload = (req, existingProduct = null) => {
+  const { body = {} } = req;
   const payload = {};
 
   if (body.name !== undefined) payload.name = toTrimmedString(body.name);
@@ -186,15 +242,27 @@ const normalizeProductPayload = (req) => {
   const parsedFeatured = parseBoolean(body.featured);
   if (parsedFeatured !== undefined) payload.featured = parsedFeatured;
 
-  const uploadedImageUrl = buildUploadedImageUrl(req, file);
+  const uploadedImageUrls = buildUploadedImageUrls(req);
   const imageUrlFromBody = toTrimmedString(body.imageUrl || body.image);
+  const imageUrlsFromBody = parseImageUrls(body.imageUrls);
 
-  if (uploadedImageUrl) {
-    payload.image = uploadedImageUrl;
-    payload.images = [uploadedImageUrl];
-  } else if (imageUrlFromBody) {
-    payload.image = imageUrlFromBody;
-    payload.images = [imageUrlFromBody];
+  const existingImages = normalizeUniqueImages([
+    ...(Array.isArray(existingProduct?.images) ? existingProduct.images : []),
+    existingProduct?.image
+  ]);
+
+  const combinedImages = normalizeUniqueImages([
+    ...uploadedImageUrls,
+    ...imageUrlsFromBody,
+    imageUrlFromBody
+  ]);
+
+  if (combinedImages.length > 0) {
+    payload.images = combinedImages;
+    payload.image = combinedImages[0];
+  } else if (existingImages.length > 0) {
+    payload.images = existingImages;
+    payload.image = existingImages[0];
   }
 
   return payload;
@@ -291,7 +359,10 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create product (Admin only)
-router.post('/', protect, admin, upload.single('imageFile'), async (req, res) => {
+router.post('/', protect, admin, upload.fields([
+  { name: 'imageFiles', maxCount: 5 },
+  { name: 'imageFile', maxCount: 1 }
+]), async (req, res) => {
   try {
     const payload = normalizeProductPayload(req);
 
@@ -304,8 +375,12 @@ router.post('/', protect, admin, upload.single('imageFile'), async (req, res) =>
       );
     }
 
-    if (!payload.image) {
-      return res.status(400).json({ message: 'Please provide either an image URL or upload an image file' });
+    if (!payload.image || !Array.isArray(payload.images) || payload.images.length === 0) {
+      return res.status(400).json({ message: 'Please provide at least one image URL or upload image file(s)' });
+    }
+
+    if (payload.images.length > 5) {
+      return res.status(400).json({ message: 'You can add maximum 5 images per product' });
     }
 
     const categoryError = validateCategorySelection(payload.category, payload.subcategory);
@@ -326,11 +401,14 @@ router.post('/', protect, admin, upload.single('imageFile'), async (req, res) =>
 });
 
 // Update product (Admin only)
-router.put('/:id', protect, admin, upload.single('imageFile'), async (req, res) => {
+router.put('/:id', protect, admin, upload.fields([
+  { name: 'imageFiles', maxCount: 5 },
+  { name: 'imageFile', maxCount: 1 }
+]), async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (product) {
-      const payload = normalizeProductPayload(req);
+      const payload = normalizeProductPayload(req, product);
 
       if (payload.sizeStock !== undefined && payload.sizePricing === undefined) {
         const fallbackPrice = payload.price !== undefined ? payload.price : product.price;
@@ -367,7 +445,13 @@ router.put('/:id', protect, admin, upload.single('imageFile'), async (req, res) 
       if (payload.subcategory !== undefined) product.subcategory = payload.subcategory;
       if (payload.image !== undefined) {
         product.image = payload.image;
-        product.images = payload.images || [payload.image];
+      }
+
+      if (payload.images !== undefined) {
+        if (payload.images.length > 5) {
+          return res.status(400).json({ message: 'You can add maximum 5 images per product' });
+        }
+        product.images = payload.images;
       }
 
       const updatedProduct = await product.save();

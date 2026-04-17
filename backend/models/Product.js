@@ -4,6 +4,7 @@ import {
   DEFAULT_PRODUCT_SIZE_OPTIONS,
   deriveSizeStockFromSizePricing,
   calculateTotalStockFromSizeStock,
+  normalizeColorList,
   normalizeSizePricingMap,
   selectDisplayPricingFromSizePricing,
   normalizeSizeStockMap,
@@ -56,13 +57,26 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  images: [String],
+  images: {
+    type: [String],
+    default: [],
+    validate: {
+      validator: (value) => Array.isArray(value) && value.length <= 5,
+      message: 'You can add maximum 5 images per product'
+    }
+  },
   sizePricing: {
     type: Map,
     of: new mongoose.Schema({
+      colors: {
+        type: [String],
+        default: [],
+        set: normalizeColorList
+      },
       quantity: {
         type: Number,
         min: 0,
+        // Quantity is retained only for backward compatibility.
         set: normalizeStockQuantity
       },
       price: {
@@ -123,6 +137,26 @@ const productSchema = new mongoose.Schema({
 });
 
 productSchema.pre('validate', function(next) {
+  const rawImages = Array.isArray(this.images)
+    ? this.images
+    : (this.image ? [this.image] : []);
+
+  const normalizedImages = [...new Set(
+    rawImages
+      .map((image) => (typeof image === 'string' ? image.trim() : ''))
+      .filter(Boolean)
+  )].slice(0, 5);
+
+  if (normalizedImages.length === 0 && this.image) {
+    normalizedImages.push(this.image.trim());
+  }
+
+  this.images = normalizedImages;
+
+  if ((!this.image || !String(this.image).trim()) && normalizedImages.length > 0) {
+    this.image = normalizedImages[0];
+  }
+
   const normalizedSizePricing = normalizeSizePricingMap(
     this.sizePricing,
     this.sizeStock,

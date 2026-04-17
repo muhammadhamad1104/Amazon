@@ -168,6 +168,7 @@ const OrderDetail = () => {
                   <div className="item-details">
                     <h3>{item.name}</h3>
                     <p>Size: {getDisplaySize(item.size)}</p>
+                    <p>Color: {item.color || 'Default'}</p>
                     <p>Quantity: {item.quantity}</p>
                     <p className="item-price">{formatPKR(item.price)} each</p>
                   </div>

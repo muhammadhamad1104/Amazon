@@ -83,8 +83,8 @@ const OrdersManagement = () => {
 
     return orders.filter((order) => {
       const orderCode = order._id?.slice(-8).toLowerCase() || '';
-      const customerName = order.user?.name?.toLowerCase() || '';
-      const customerEmail = order.user?.email?.toLowerCase() || '';
+      const customerName = (order.user?.name || order.guestName || '').toLowerCase();
+      const customerEmail = (order.user?.email || order.guestEmail || '').toLowerCase();
       const status = order.status?.toLowerCase() || '';
       const paymentStatus = getPaymentStatus(order).toLowerCase();
       return [orderCode, customerName, customerEmail, status, paymentStatus].some((value) => value.includes(query));
@@ -198,8 +198,8 @@ const OrdersManagement = () => {
                     <div className="order-ref">#{order._id.slice(-8).toUpperCase()}</div>
                   </td>
                   <td data-label="Customer">
-                    <div className="customer-name">{order.user?.name || 'Unknown User'}</div>
-                    <div className="customer-email">{order.user?.email || 'No Email'}</div>
+                    <div className="customer-name">{order.user?.name || order.guestName || 'Guest Customer'}</div>
+                    <div className="customer-email">{order.user?.email || order.guestEmail || 'No Email'}</div>
                   </td>
                   <td data-label="Date">{new Date(order.createdAt).toLocaleDateString('en-US')}</td>
                   <td data-label="Total" className="order-amount">{formatPKR(order.totalPrice)}</td>

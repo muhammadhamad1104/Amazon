@@ -44,7 +44,7 @@ const ProductDetail = () => {
   });
   const [review, setReview] = useState({ rating: 5, comment: '' });
   const { isAuthenticated } = useAuthStore();
-  const { setCart } = useCartStore();
+  const { setCart, addGuestItem } = useCartStore();
 
   const fetchProduct = useCallback(async () => {
     setLoading(true);
@@ -106,12 +106,6 @@ const ProductDetail = () => {
       return;
     }
 
-    if (!isAuthenticated) {
-      toast.error('Please login to add items to cart');
-      navigate('/login');
-      return;
-    }
-
     if (!selectedSize) {
       toast.error('Please select a size');
       return;
@@ -119,6 +113,17 @@ const ProductDetail = () => {
 
     if (!selectedColor) {
       toast.error('Please select a color');
+      return;
+    }
+
+    if (!isAuthenticated) {
+      addGuestItem({
+        product,
+        size: selectedSize,
+        color: selectedColor,
+        quantity: 1
+      });
+      toast.success(`Added ${selectedSize} / ${selectedColor} to cart`);
       return;
     }
 
@@ -204,6 +209,16 @@ const ProductDetail = () => {
     thumbnailStripRef.current.classList.remove('dragging');
   };
 
+  const scrollThumbnails = (direction) => {
+    if (!thumbnailStripRef.current) return;
+
+    const scrollStep = Math.max(thumbnailStripRef.current.clientWidth * 0.7, 120);
+    thumbnailStripRef.current.scrollBy({
+      left: direction * scrollStep,
+      behavior: 'smooth'
+    });
+  };
+
   const goToNextImage = (event) => {
     event?.stopPropagation?.();
     if (!images.length) return;
@@ -245,23 +260,43 @@ const ProductDetail = () => {
           </button>
 
           {images.length > 1 && (
-            <div
-              ref={thumbnailStripRef}
-              className="thumbnail-images"
-              onMouseDown={startThumbnailDrag}
-              onMouseMove={moveThumbnailDrag}
-              onMouseUp={stopThumbnailDrag}
-              onMouseLeave={stopThumbnailDrag}
-            >
-              {images.map((image, index) => (
-                <img
-                  key={image + index}
-                  src={image}
-                  alt={`${product.name} ${index + 1}`}
-                  className={selectedImage === index ? 'active' : ''}
-                  onClick={() => setSelectedImage(index)}
-                />
-              ))}
+            <div className="thumbnail-strip-wrapper">
+              <button
+                type="button"
+                className="thumbnail-nav-btn prev"
+                onClick={() => scrollThumbnails(-1)}
+                aria-label="Scroll thumbnails left"
+              >
+                <FaChevronLeft />
+              </button>
+
+              <div
+                ref={thumbnailStripRef}
+                className="thumbnail-images"
+                onMouseDown={startThumbnailDrag}
+                onMouseMove={moveThumbnailDrag}
+                onMouseUp={stopThumbnailDrag}
+                onMouseLeave={stopThumbnailDrag}
+              >
+                {images.map((image, index) => (
+                  <img
+                    key={image + index}
+                    src={image}
+                    alt={`${product.name} ${index + 1}`}
+                    className={selectedImage === index ? 'active' : ''}
+                    onClick={() => setSelectedImage(index)}
+                  />
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="thumbnail-nav-btn next"
+                onClick={() => scrollThumbnails(1)}
+                aria-label="Scroll thumbnails right"
+              >
+                <FaChevronRight />
+              </button>
             </div>
           )}
         </div>

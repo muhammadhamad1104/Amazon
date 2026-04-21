@@ -3,7 +3,7 @@ import nodemailer from 'nodemailer';
 import Order from '../models/Order.js';
 import Cart from '../models/Cart.js';
 import Product from '../models/Product.js';
-import { protect, admin } from '../middleware/auth.js';
+import { protect, admin, optionalProtect } from '../middleware/auth.js';
 import { getSmtpTransportConfig } from '../utils/smtpConfig.js';
 import {
   DEFAULT_VARIANT_COLOR,
@@ -128,9 +128,31 @@ const sendOrderPlacementNotifications = async ({ order, customerName, customerEm
 };
 
 // Create new order
-router.post('/', protect, async (req, res) => {
+router.post('/', optionalProtect, async (req, res) => {
   try {
-    const { items, shippingAddress, paymentMethod } = req.body;
+    const {
+      items,
+      shippingAddress,
+      paymentMethod,
+      guestName,
+      guestEmail,
+      guestPhone
+    } = req.body;
+
+    const normalizedGuestName = String(guestName || '').trim();
+    const normalizedGuestEmail = String(guestEmail || '').trim().toLowerCase();
+    const normalizedGuestPhone = String(guestPhone || '').trim();
+
+    if (!req.user) {
+      if (!normalizedGuestName || !normalizedGuestEmail) {
+        return res.status(400).json({ message: 'Guest checkout requires name and email' });
+      }
+
+      const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedGuestEmail);
+      if (!isEmailValid) {
+        return res.status(400).json({ message: 'Please provide a valid guest email address' });
+      }
+    }
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ message: 'No order items' });
@@ -201,28 +223,38 @@ router.post('/', protect, async (req, res) => {
     const shippingPrice = FIXED_SHIPPING_PRICE;
     const totalPrice = itemsPrice + taxPrice + shippingPrice;
 
-    const order = new Order({
-      user: req.user._id,
+    const orderPayload = {
       items: normalizedItems,
       shippingAddress,
       paymentMethod,
       taxPrice,
       shippingPrice,
       totalPrice,
-      status: 'Pending'
-    });
+      status: 'Pending',
+      guestName: req.user ? '' : normalizedGuestName,
+      guestEmail: req.user ? '' : normalizedGuestEmail,
+      guestPhone: req.user ? '' : normalizedGuestPhone
+    };
+
+    if (req.user) {
+      orderPayload.user = req.user._id;
+    }
+
+    const order = new Order(orderPayload);
 
     const createdOrder = await order.save();
 
-    await Cart.findOneAndUpdate(
-      { user: req.user._id },
-      { items: [], totalPrice: 0 }
-    );
+    if (req.user) {
+      await Cart.findOneAndUpdate(
+        { user: req.user._id },
+        { items: [], totalPrice: 0 }
+      );
+    }
 
     await sendOrderPlacementNotifications({
       order: createdOrder,
-      customerName: req.user.name,
-      customerEmail: req.user.email
+      customerName: req.user?.name || normalizedGuestName,
+      customerEmail: req.user?.email || normalizedGuestEmail
     });
 
     res.status(201).json(createdOrder);
@@ -258,15 +290,22 @@ router.get('/:id', protect, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id).populate('user', 'name email');
 
-    if (order) {
-      if (order.user._id.toString() === req.user._id.toString() || req.user.isAdmin) {
-        res.json(order);
-      } else {
-        res.status(403).json({ message: 'Not authorized to view this order' });
-      }
-    } else {
+    if (!order) {
       res.status(404).json({ message: 'Order not found' });
+      return;
     }
+
+    if (req.user.isAdmin) {
+      res.json(order);
+      return;
+    }
+
+    if (!order.user || order.user._id.toString() !== req.user._id.toString()) {
+      res.status(403).json({ message: 'Not authorized to view this order' });
+      return;
+    }
+
+    res.json(order);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -281,7 +320,7 @@ router.put('/:id/pay', protect, async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    const isOwner = order.user.toString() === req.user._id.toString();
+    const isOwner = order.user && order.user.toString() === req.user._id.toString();
     if (!isOwner && !req.user.isAdmin) {
       return res.status(403).json({ message: 'Not authorized' });
     }
@@ -292,7 +331,7 @@ router.put('/:id/pay', protect, async (req, res) => {
       id: req.body.id,
       status: req.body.status || 'Cleared',
       updateTime: req.body.update_time || new Date().toISOString(),
-      emailAddress: req.body.email_address || req.user.email
+      emailAddress: req.body.email_address || req.user.email || order.guestEmail
     };
 
     if (order.status === 'Pending') {
@@ -375,7 +414,7 @@ router.put('/:id/cancel', protect, async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    if (order.user.toString() !== req.user._id.toString()) {
+    if (!order.user || order.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Not authorized' });
     }
 

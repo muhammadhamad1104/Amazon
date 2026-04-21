@@ -17,16 +17,23 @@ const Cart = () => {
   const [loading, setLoading] = useState(true);
   const [pendingRemove, setPendingRemove] = useState(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const { cart, setCart } = useCartStore();
+  const {
+    cart,
+    setCart,
+    updateGuestItem,
+    removeGuestItem,
+    clearCart: clearGuestCart
+  } = useCartStore();
   const { isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login');
+    if (isAuthenticated) {
+      fetchCart();
       return;
     }
-    fetchCart();
+
+    setLoading(false);
   }, [isAuthenticated]);
 
   const fetchCart = async () => {
@@ -41,6 +48,11 @@ const Cart = () => {
   };
 
   const updateQuantity = async (productId, size, color, newQuantity) => {
+    if (!isAuthenticated) {
+      updateGuestItem({ productId, size, color, quantity: newQuantity });
+      return;
+    }
+
     try {
       const { data } = await cartAPI.update({
         productId,
@@ -55,6 +67,12 @@ const Cart = () => {
   };
 
   const removeItem = async (productId, size, color) => {
+    if (!isAuthenticated) {
+      removeGuestItem({ productId, size, color });
+      toast.success('Item removed from cart');
+      return;
+    }
+
     try {
       const { data } = await cartAPI.remove(productId, size, color);
       setCart(data);
@@ -83,6 +101,12 @@ const Cart = () => {
   };
 
   const clearCart = async () => {
+    if (!isAuthenticated) {
+      clearGuestCart();
+      toast.success('Cart cleared');
+      return;
+    }
+
     try {
       await cartAPI.clear();
       setCart({ items: [], totalPrice: 0 });

@@ -331,6 +331,14 @@ const Header = () => {
             </>
           ) : (
             <>
+              <Link to="/cart" className="nav-link cart-link" onClick={closeMobileMenu}>
+                <FaShoppingCart />
+                <span className="cart-text">Cart</span>
+                {cartItemsCount > 0 && (
+                  <span className="cart-badge">{cartItemsCount}</span>
+                )}
+              </Link>
+
               <Link to="/login" className="nav-link" onClick={closeMobileMenu}>
                 Login
               </Link>

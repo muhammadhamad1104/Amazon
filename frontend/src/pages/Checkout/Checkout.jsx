@@ -18,6 +18,11 @@ const Checkout = () => {
   const { user, isAuthenticated } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [guestContact, setGuestContact] = useState({
+    name: '',
+    email: '',
+    phone: ''
+  });
 
   const [shippingAddress, setShippingAddress] = useState({
     street: user?.address?.street || '',
@@ -30,11 +35,12 @@ const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState('Credit Card');
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login');
+    if (isAuthenticated) {
+      fetchCart();
       return;
     }
-    fetchCart();
+
+    setLoading(false);
   }, [isAuthenticated]);
 
   const fetchCart = async () => {
@@ -56,6 +62,18 @@ const Checkout = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!cart?.items || cart.items.length === 0) {
+      toast.error('Your cart is empty');
+      navigate('/cart');
+      return;
+    }
+
+    if (!isAuthenticated && (!guestContact.name.trim() || !guestContact.email.trim())) {
+      toast.error('Please enter your name and email to place order');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -75,15 +93,28 @@ const Checkout = () => {
         };
       });
 
-      const { data } = await ordersAPI.create({
+      const orderPayload = {
         items: orderItems,
         shippingAddress,
         paymentMethod
-      });
+      };
+
+      if (!isAuthenticated) {
+        orderPayload.guestName = guestContact.name.trim();
+        orderPayload.guestEmail = guestContact.email.trim();
+        orderPayload.guestPhone = guestContact.phone.trim();
+      }
+
+      const { data } = await ordersAPI.create(orderPayload);
 
       clearCart();
       toast.success('Order placed successfully!');
-      navigate(`/order/${data._id}`, { replace: true });
+
+      if (isAuthenticated) {
+        navigate(`/order/${data._id}`, { replace: true });
+      } else {
+        navigate('/products', { replace: true });
+      }
     } catch (error) {
       setSubmitting(false);
       toast.error(error.response?.data?.message || 'Failed to place order');
@@ -106,6 +137,45 @@ const Checkout = () => {
 
         <form onSubmit={handleSubmit} className="checkout-form">
           <div className="checkout-content">
+            {!isAuthenticated && (
+              <div className="checkout-section">
+                <h2>Contact Details</h2>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Full Name *</label>
+                    <input
+                      type="text"
+                      value={guestContact.name}
+                      onChange={(event) => setGuestContact({ ...guestContact, name: event.target.value })}
+                      required
+                      placeholder="Enter your full name"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Email *</label>
+                    <input
+                      type="email"
+                      value={guestContact.email}
+                      onChange={(event) => setGuestContact({ ...guestContact, email: event.target.value })}
+                      required
+                      placeholder="you@example.com"
+                    />
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label>Phone Number</label>
+                    <input
+                      type="text"
+                      value={guestContact.phone}
+                      onChange={(event) => setGuestContact({ ...guestContact, phone: event.target.value })}
+                      placeholder="03XX-XXXXXXX"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Shipping Address */}
             <div className="checkout-section">
               <h2>Shipping Address</h2>

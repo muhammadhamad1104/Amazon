@@ -15,7 +15,7 @@ import {
 } from '../../utils/sizeStock';
 import './ProductFormModal.css';
 
-const MAX_PRODUCT_IMAGES = 5;
+const MAX_PRODUCT_IMAGES = 10;
 
 const createInitialSizePricing = () => ({});
 

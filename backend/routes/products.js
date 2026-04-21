@@ -18,6 +18,7 @@ import {
 } from '../config/productCategories.js';
 
 const router = express.Router();
+const MAX_PRODUCT_IMAGES = 10;
 
 const toTrimmedString = (value) => (typeof value === 'string' ? value.trim() : '');
 
@@ -116,7 +117,7 @@ const buildUploadedImageUrls = (req) => {
   return getUploadedFiles(req)
     .map((file) => (file?.filename ? `/uploads/${file.filename}` : ''))
     .filter(Boolean)
-    .slice(0, 5);
+    .slice(0, MAX_PRODUCT_IMAGES);
 };
 
 const normalizeUniqueImages = (images = []) => {
@@ -124,7 +125,7 @@ const normalizeUniqueImages = (images = []) => {
     images
       .map((image) => toTrimmedString(image))
       .filter(Boolean)
-  )].slice(0, 5);
+  )].slice(0, MAX_PRODUCT_IMAGES);
 };
 
 const parseImageUrls = (value) => {
@@ -360,7 +361,7 @@ router.get('/:id', async (req, res) => {
 
 // Create product (Admin only)
 router.post('/', protect, admin, upload.fields([
-  { name: 'imageFiles', maxCount: 5 },
+  { name: 'imageFiles', maxCount: MAX_PRODUCT_IMAGES },
   { name: 'imageFile', maxCount: 1 }
 ]), async (req, res) => {
   try {
@@ -379,8 +380,8 @@ router.post('/', protect, admin, upload.fields([
       return res.status(400).json({ message: 'Please provide at least one image URL or upload image file(s)' });
     }
 
-    if (payload.images.length > 5) {
-      return res.status(400).json({ message: 'You can add maximum 5 images per product' });
+    if (payload.images.length > MAX_PRODUCT_IMAGES) {
+      return res.status(400).json({ message: `You can add maximum ${MAX_PRODUCT_IMAGES} images per product` });
     }
 
     const categoryError = validateCategorySelection(payload.category, payload.subcategory);
@@ -402,7 +403,7 @@ router.post('/', protect, admin, upload.fields([
 
 // Update product (Admin only)
 router.put('/:id', protect, admin, upload.fields([
-  { name: 'imageFiles', maxCount: 5 },
+  { name: 'imageFiles', maxCount: MAX_PRODUCT_IMAGES },
   { name: 'imageFile', maxCount: 1 }
 ]), async (req, res) => {
   try {
@@ -448,8 +449,8 @@ router.put('/:id', protect, admin, upload.fields([
       }
 
       if (payload.images !== undefined) {
-        if (payload.images.length > 5) {
-          return res.status(400).json({ message: 'You can add maximum 5 images per product' });
+        if (payload.images.length > MAX_PRODUCT_IMAGES) {
+          return res.status(400).json({ message: `You can add maximum ${MAX_PRODUCT_IMAGES} images per product` });
         }
         product.images = payload.images;
       }

@@ -4,8 +4,23 @@ import { DEFAULT_VARIANT_COLOR, normalizeColorLabel, normalizeSizeLabel } from '
 const orderSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    ref: 'User'
+  },
+  guestName: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  guestEmail: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    default: ''
+  },
+  guestPhone: {
+    type: String,
+    trim: true,
+    default: ''
   },
   items: [{
     product: {

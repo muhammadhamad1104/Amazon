@@ -61,8 +61,8 @@ const productSchema = new mongoose.Schema({
     type: [String],
     default: [],
     validate: {
-      validator: (value) => Array.isArray(value) && value.length <= 5,
-      message: 'You can add maximum 5 images per product'
+      validator: (value) => Array.isArray(value) && value.length <= 10,
+      message: 'You can add maximum 10 images per product'
     }
   },
   sizePricing: {
@@ -145,7 +145,7 @@ productSchema.pre('validate', function(next) {
     rawImages
       .map((image) => (typeof image === 'string' ? image.trim() : ''))
       .filter(Boolean)
-  )].slice(0, 5);
+  )].slice(0, 10);
 
   if (normalizedImages.length === 0 && this.image) {
     normalizedImages.push(this.image.trim());

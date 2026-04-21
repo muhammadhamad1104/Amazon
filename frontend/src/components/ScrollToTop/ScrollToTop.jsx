@@ -6,6 +6,7 @@ import './ScrollToTop.css';
 const ScrollToTop = () => {
   const location = useLocation();
   const [isVisible, setIsVisible] = useState(false);
+  const shouldHideButton = location.pathname === '/';
 
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
@@ -31,7 +32,7 @@ const ScrollToTop = () => {
 
   return (
     <>
-      {isVisible && (
+      {!shouldHideButton && isVisible && (
         <button
           onClick={scrollToTop}
           className="scroll-to-top"

@@ -648,12 +648,16 @@
   .header-container {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'logo cart hamburger'
+      'search search search';
     align-items: center;
     gap: 0.75rem;
     padding: 0 1rem;
   }
 
   .logo {
+    grid-area: logo;
     font-size: 1.15rem;
     min-width: 0;
   }
@@ -671,15 +675,15 @@
   }
 
   .search-bar {
-    grid-column: 1 / -1;
-    order: 3;
+    grid-area: search;
+    grid-column: auto;
     width: 100%;
     max-width: 100%;
   }
 
   .mobile-top-cart {
     display: inline-flex;
-    order: 2;
+    grid-area: cart;
     justify-self: end;
   }
 
@@ -687,7 +691,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    order: 3;
+    grid-area: hamburger;
     justify-self: end;
     margin-left: 0;
   }

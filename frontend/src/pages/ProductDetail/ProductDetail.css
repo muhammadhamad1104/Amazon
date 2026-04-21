@@ -679,12 +679,15 @@
   }
 
   .thumbnail-strip-wrapper {
-    grid-template-columns: 1fr;
-    gap: 0;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.4rem;
   }
 
   .thumbnail-nav-btn {
-    display: none;
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    flex-shrink: 0;
   }
 
   .reviews-section {
@@ -793,6 +796,12 @@
     width: 50px;
     height: 50px;
     min-width: 50px;
+  }
+
+  .thumbnail-nav-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
   }
 
   .product-title {

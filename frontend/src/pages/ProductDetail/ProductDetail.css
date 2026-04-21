@@ -114,16 +114,6 @@
   border-color: #ff9900;
 }
 
-@media (hover: none), (pointer: coarse) {
-  .thumbnail-strip-wrapper {
-    grid-template-columns: 1fr;
-  }
-
-  .thumbnail-nav-btn {
-    display: none;
-  }
-}
-
 .product-info-section {
   display: flex;
   flex-direction: column;
@@ -647,7 +637,12 @@
   }
 
   .thumbnail-strip-wrapper {
+    grid-template-columns: 1fr;
     gap: 0;
+  }
+
+  .thumbnail-nav-btn {
+    display: none;
   }
 
   .reviews-section {

@@ -109,7 +109,7 @@ const ProductDetail = () => {
 
     activeThumbnail?.scrollIntoView({
       behavior: 'smooth',
-      inline: 'center',
+      inline: 'nearest',
       block: 'nearest'
     });
   }, [selectedImage]);

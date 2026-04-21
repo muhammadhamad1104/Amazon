@@ -676,9 +676,11 @@
 
   .search-bar {
     grid-area: search;
-    grid-column: auto;
+    grid-column: 1 / -1;
+    justify-self: stretch;
     width: 100%;
     max-width: 100%;
+    min-width: 0;
   }
 
   .mobile-top-cart {

@@ -101,6 +101,19 @@ const ProductDetail = () => {
     return () => window.removeEventListener('keydown', handleEsc);
   }, []);
 
+  useEffect(() => {
+    if (!thumbnailStripRef.current) return;
+
+    const thumbnails = thumbnailStripRef.current.querySelectorAll('img');
+    const activeThumbnail = thumbnails[selectedImage];
+
+    activeThumbnail?.scrollIntoView({
+      behavior: 'smooth',
+      inline: 'center',
+      block: 'nearest'
+    });
+  }, [selectedImage]);
+
   const handleAddToCart = async () => {
     if (isAddingToCart || addToCartInFlightRef.current) {
       return;
@@ -224,16 +237,6 @@ const ProductDetail = () => {
     thumbnailStripRef.current.classList.remove('dragging');
   };
 
-  const scrollThumbnails = (direction) => {
-    if (!thumbnailStripRef.current) return;
-
-    const scrollStep = Math.max(thumbnailStripRef.current.clientWidth * 0.7, 120);
-    thumbnailStripRef.current.scrollBy({
-      left: direction * scrollStep,
-      behavior: 'smooth'
-    });
-  };
-
   const goToNextImage = (event) => {
     event?.stopPropagation?.();
     if (!images.length) return;
@@ -303,7 +306,7 @@ const ProductDetail = () => {
               <button
                 type="button"
                 className="thumbnail-nav-btn prev"
-                onClick={() => scrollThumbnails(-1)}
+                onClick={goToPreviousImage}
                 aria-label="Scroll thumbnails left"
               >
                 <FaChevronLeft />
@@ -335,7 +338,7 @@ const ProductDetail = () => {
               <button
                 type="button"
                 className="thumbnail-nav-btn next"
-                onClick={() => scrollThumbnails(1)}
+                onClick={goToNextImage}
                 aria-label="Scroll thumbnails right"
               >
                 <FaChevronRight />

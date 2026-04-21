@@ -100,9 +100,7 @@ const AdTicker = () => {
           loading="eager"
         />
         <div className="ad-overlay">
-          <span className="ad-company">{advertisements[currentAd].company}</span>
           <h2>{advertisements[currentAd].title}</h2>
-          <p>{advertisements[currentAd].subtitle}</p>
           <button type="button" className="shop-now-btn" onClick={handleShopNow}>Shop Now</button>
         </div>
       </div>

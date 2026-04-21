@@ -94,7 +94,7 @@ const Home = () => {
 
       <a
         className="whatsapp-float-btn"
-        href="https://wa.me/923306066708"
+        href="https://wa.me/923164928847"
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Chat on WhatsApp"

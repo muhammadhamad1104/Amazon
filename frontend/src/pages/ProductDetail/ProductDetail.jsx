@@ -185,11 +185,23 @@ const ProductDetail = () => {
     return stars;
   };
 
+  const getPointerX = (event) => {
+    if (event.touches?.[0]) {
+      return event.touches[0].clientX;
+    }
+
+    if (event.changedTouches?.[0]) {
+      return event.changedTouches[0].clientX;
+    }
+
+    return event.clientX ?? event.pageX ?? 0;
+  };
+
   const startThumbnailDrag = (event) => {
     if (!thumbnailStripRef.current) return;
 
     dragStateRef.current.isDragging = true;
-    dragStateRef.current.startX = event.pageX;
+    dragStateRef.current.startX = getPointerX(event);
     dragStateRef.current.startScrollLeft = thumbnailStripRef.current.scrollLeft;
     thumbnailStripRef.current.classList.add('dragging');
   };
@@ -197,8 +209,11 @@ const ProductDetail = () => {
   const moveThumbnailDrag = (event) => {
     if (!thumbnailStripRef.current || !dragStateRef.current.isDragging) return;
 
-    event.preventDefault();
-    const deltaX = event.pageX - dragStateRef.current.startX;
+    if (event.cancelable) {
+      event.preventDefault();
+    }
+
+    const deltaX = getPointerX(event) - dragStateRef.current.startX;
     thumbnailStripRef.current.scrollLeft = dragStateRef.current.startScrollLeft - deltaX;
   };
 
@@ -249,15 +264,39 @@ const ProductDetail = () => {
     <div className="product-detail-page">
       <div className="product-detail-container">
         <div className="product-images">
-          <button
-            type="button"
-            className="main-image"
-            onClick={() => setIsImageViewerOpen(true)}
-            title="View full screen"
-          >
-            <img src={images[selectedImage] || resolveImageUrl(product.image)} alt={product.name} />
-            <span className="zoom-hint"><FaSearchPlus /> View Full Screen</span>
-          </button>
+          <div className="main-image-wrapper">
+            <button
+              type="button"
+              className="main-image"
+              onClick={() => setIsImageViewerOpen(true)}
+              title="View full screen"
+            >
+              <img src={images[selectedImage] || resolveImageUrl(product.image)} alt={product.name} />
+              <span className="zoom-hint"><FaSearchPlus /> View Full Screen</span>
+            </button>
+
+            {images.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className="main-image-nav prev"
+                  onClick={goToPreviousImage}
+                  aria-label="Show previous image"
+                >
+                  <FaChevronLeft />
+                </button>
+
+                <button
+                  type="button"
+                  className="main-image-nav next"
+                  onClick={goToNextImage}
+                  aria-label="Show next image"
+                >
+                  <FaChevronRight />
+                </button>
+              </>
+            )}
+          </div>
 
           {images.length > 1 && (
             <div className="thumbnail-strip-wrapper">
@@ -277,6 +316,10 @@ const ProductDetail = () => {
                 onMouseMove={moveThumbnailDrag}
                 onMouseUp={stopThumbnailDrag}
                 onMouseLeave={stopThumbnailDrag}
+                onTouchStart={startThumbnailDrag}
+                onTouchMove={moveThumbnailDrag}
+                onTouchEnd={stopThumbnailDrag}
+                onTouchCancel={stopThumbnailDrag}
               >
                 {images.map((image, index) => (
                   <img

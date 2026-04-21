@@ -6,7 +6,6 @@ import './ScrollToTop.css';
 const ScrollToTop = () => {
   const location = useLocation();
   const [isVisible, setIsVisible] = useState(false);
-  const [isScrolling, setIsScrolling] = useState(false);
 
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
@@ -14,28 +13,20 @@ const ScrollToTop = () => {
 
   useEffect(() => {
     const toggleVisibility = () => {
-      if (window.pageYOffset > 180) {
+      if (window.pageYOffset > 90) {
         setIsVisible(true);
       } else {
         setIsVisible(false);
       }
     };
 
+    toggleVisibility();
     window.addEventListener('scroll', toggleVisibility);
     return () => window.removeEventListener('scroll', toggleVisibility);
   }, []);
 
   const scrollToTop = () => {
-    setIsScrolling(true);
-    const scrollStep = window.pageYOffset / 50; // Divide scroll distance into 50 steps
-    const scrollInterval = setInterval(() => {
-      if (window.pageYOffset > 0) {
-        window.scrollBy(0, -scrollStep);
-      } else {
-        clearInterval(scrollInterval);
-        setIsScrolling(false);
-      }
-    }, 15); // 15ms interval for smooth scrolling
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
   };
 
   return (
@@ -43,9 +34,8 @@ const ScrollToTop = () => {
       {isVisible && (
         <button
           onClick={scrollToTop}
-          className={`scroll-to-top ${isScrolling ? 'scrolling' : ''}`}
+          className="scroll-to-top"
           aria-label="Scroll to top"
-          disabled={isScrolling}
         >
           <FaArrowUp />
         </button>

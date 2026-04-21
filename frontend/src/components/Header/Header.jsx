@@ -145,6 +145,21 @@ const Header = () => {
         </form>
 
         {/* Hamburger Menu Button */}
+        <Link
+          to="/cart"
+          className="mobile-top-cart"
+          onClick={() => {
+            setShowCartDropdown(false);
+            closeMobileMenu();
+          }}
+          aria-label="Open cart"
+        >
+          <FaShoppingCart />
+          {cartItemsCount > 0 && (
+            <span className="cart-badge">{cartItemsCount}</span>
+          )}
+        </Link>
+
         <button 
           className="hamburger-btn"
           onClick={toggleMobileMenu}

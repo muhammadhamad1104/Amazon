@@ -92,10 +92,9 @@
 }
 
 .thumbnail-strip-wrapper {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  display: block;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0;
 }
 
 .thumbnail-nav-btn {
@@ -688,7 +687,7 @@
   }
 
   .thumbnail-strip-wrapper {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    display: block;
     gap: 0.4rem;
   }
 

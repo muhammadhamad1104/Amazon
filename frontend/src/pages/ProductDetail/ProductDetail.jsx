@@ -303,15 +303,6 @@ const ProductDetail = () => {
 
           {images.length > 1 && (
             <div className="thumbnail-strip-wrapper">
-              <button
-                type="button"
-                className="thumbnail-nav-btn prev"
-                onClick={goToPreviousImage}
-                aria-label="Scroll thumbnails left"
-              >
-                <FaChevronLeft />
-              </button>
-
               <div
                 ref={thumbnailStripRef}
                 className="thumbnail-images"
@@ -334,15 +325,6 @@ const ProductDetail = () => {
                   />
                 ))}
               </div>
-
-              <button
-                type="button"
-                className="thumbnail-nav-btn next"
-                onClick={goToNextImage}
-                aria-label="Scroll thumbnails right"
-              >
-                <FaChevronRight />
-              </button>
             </div>
           )}
         </div>

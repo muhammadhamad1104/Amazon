@@ -105,6 +105,22 @@ app.use((err, req, res, next) => {
     console.error(err);
   }
 
+  if (err?.name === 'MulterError') {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ message: 'Each image must be 5MB or smaller' });
+    }
+
+    if (err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({ message: 'You can upload maximum 10 images per request' });
+    }
+
+    return res.status(400).json({ message: err.message || 'Image upload failed' });
+  }
+
+  if (err?.message === 'Only image files are allowed') {
+    return res.status(400).json({ message: err.message });
+  }
+
   const statusCode = err?.message?.includes('CORS') ? 403 : 500;
   res.status(statusCode).json({ message: err.message || 'Internal server error' });
 });

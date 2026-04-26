@@ -153,6 +153,114 @@ const parseImageUrls = (value) => {
   return normalizeUniqueImages(parsedImages);
 };
 
+const parseImageFileIds = (value) => {
+  if (value === undefined || value === null || value === '') {
+    return [];
+  }
+
+  const parsedValue = parseJsonValue(value);
+  if (!Array.isArray(parsedValue)) {
+    return [];
+  }
+
+  return parsedValue
+    .map((entry) => toTrimmedString(entry))
+    .filter(Boolean);
+};
+
+const parseImageOrder = (value) => {
+  if (value === undefined || value === null || value === '') {
+    return [];
+  }
+
+  const parsedValue = parseJsonValue(value);
+  if (!Array.isArray(parsedValue)) {
+    return [];
+  }
+
+  return parsedValue
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        return null;
+      }
+
+      const type = toTrimmedString(entry.type).toLowerCase();
+      const imageValue = toTrimmedString(entry.value);
+
+      if ((type !== 'url' && type !== 'file') || !imageValue) {
+        return null;
+      }
+
+      return { type, value: imageValue };
+    })
+    .filter(Boolean);
+};
+
+const buildOrderedImages = ({
+  imageOrder = [],
+  uploadedImageUrls = [],
+  imageFileIds = [],
+  imageUrlsFromBody = [],
+  imageUrlFromBody = ''
+}) => {
+  const fileIdToUploadedUrl = new Map();
+
+  imageFileIds.forEach((fileId, index) => {
+    const uploadedUrl = uploadedImageUrls[index];
+    if (fileId && uploadedUrl && !fileIdToUploadedUrl.has(fileId)) {
+      fileIdToUploadedUrl.set(fileId, uploadedUrl);
+    }
+  });
+
+  if (imageOrder.length > 0) {
+    const consumedUploadedUrls = new Set();
+
+    const orderedImages = imageOrder.reduce((accumulator, imageEntry) => {
+      if (imageEntry.type === 'url') {
+        accumulator.push(imageEntry.value);
+        return accumulator;
+      }
+
+      const uploadedUrl = fileIdToUploadedUrl.get(imageEntry.value);
+      if (uploadedUrl) {
+        consumedUploadedUrls.add(uploadedUrl);
+        accumulator.push(uploadedUrl);
+      }
+
+      return accumulator;
+    }, []);
+
+    const remainingUploadedImages = uploadedImageUrls.filter((uploadedUrl) => !consumedUploadedUrls.has(uploadedUrl));
+
+    return normalizeUniqueImages([
+      ...orderedImages,
+      ...remainingUploadedImages
+    ]);
+  }
+
+  return normalizeUniqueImages([
+    ...imageUrlsFromBody,
+    imageUrlFromBody,
+    ...uploadedImageUrls
+  ]);
+};
+
+const getUploadErrorMessage = (error) => {
+  if (error?.name !== 'MulterError') {
+    return '';
+  }
+
+  if (error.code === 'LIMIT_FILE_SIZE') {
+    return 'Each image must be 5MB or smaller';
+  }
+
+  if (error.code === 'LIMIT_FILE_COUNT' || error.code === 'LIMIT_UNEXPECTED_FILE') {
+    return `You can upload maximum ${MAX_PRODUCT_IMAGES} images`;
+  }
+
+  return error.message || 'Image upload failed';
+};
+
 const normalizeProductPayload = (req, existingProduct = null) => {
   const { body = {} } = req;
   const payload = {};
@@ -243,20 +351,50 @@ const normalizeProductPayload = (req, existingProduct = null) => {
   const parsedFeatured = parseBoolean(body.featured);
   if (parsedFeatured !== undefined) payload.featured = parsedFeatured;
 
+  const forceSoldOut = parseBoolean(body.forceSoldOut);
+  if (forceSoldOut === true) {
+    if (payload.sizePricing && typeof payload.sizePricing === 'object') {
+      payload.sizePricing = Object.entries(payload.sizePricing).reduce((accumulator, [size, variant]) => {
+        accumulator[size] = {
+          ...(variant || {}),
+          quantity: 0
+        };
+        return accumulator;
+      }, {});
+    }
+
+    payload.sizeStock = {};
+    payload.stock = 0;
+  }
+
   const uploadedImageUrls = buildUploadedImageUrls(req);
   const imageUrlFromBody = toTrimmedString(body.imageUrl || body.image);
   const imageUrlsFromBody = parseImageUrls(body.imageUrls);
+  const imageFileIds = parseImageFileIds(body.imageFileIds);
+  const imageOrder = parseImageOrder(body.imageOrder);
+  const hasExplicitImageOrder = imageOrder.length > 0;
 
   const existingImages = normalizeUniqueImages([
     ...(Array.isArray(existingProduct?.images) ? existingProduct.images : []),
     existingProduct?.image
   ]);
 
-  const combinedImages = normalizeUniqueImages([
-    ...uploadedImageUrls,
-    ...imageUrlsFromBody,
+  const submittedImages = buildOrderedImages({
+    imageOrder,
+    uploadedImageUrls,
+    imageFileIds,
+    imageUrlsFromBody,
     imageUrlFromBody
-  ]);
+  });
+
+  const keepExistingImages = parseBoolean(body.keepExistingImages);
+  const shouldMergeExistingImages = Boolean(existingProduct)
+    && !hasExplicitImageOrder
+    && keepExistingImages !== false;
+
+  const combinedImages = shouldMergeExistingImages
+    ? normalizeUniqueImages([...existingImages, ...submittedImages])
+    : submittedImages;
 
   if (combinedImages.length > 0) {
     payload.images = combinedImages;
@@ -289,6 +427,44 @@ const validateCategorySelection = (category, subcategory = '') => {
 
   if (normalizedSubcategory && !validSubcategories.includes(normalizedSubcategory)) {
     return `Invalid subcategory for ${category}`;
+  }
+
+  return '';
+};
+
+const validateProductPayload = (payload, { isUpdate = false } = {}) => {
+  const requiredStringFields = [
+    ['name', 'Product name is required'],
+    ['description', 'Product description is required'],
+    ['brand', 'Brand is required'],
+    ['category', 'Category is required']
+  ];
+
+  for (const [fieldName, errorMessage] of requiredStringFields) {
+    const fieldValue = payload[fieldName];
+    const hasField = fieldValue !== undefined;
+
+    if (!isUpdate && !toTrimmedString(fieldValue)) {
+      return errorMessage;
+    }
+
+    if (isUpdate && hasField && !toTrimmedString(fieldValue)) {
+      return errorMessage;
+    }
+  }
+
+  if (!isUpdate) {
+    if (!payload.sizePricing || Object.keys(payload.sizePricing).length === 0) {
+      return 'Please add at least one size variant with colors and pricing';
+    }
+
+    if (!Number.isFinite(payload.price) || payload.price <= 0) {
+      return 'Product price must be greater than zero';
+    }
+
+    if (!Number.isFinite(payload.originalPrice) || payload.originalPrice <= 0) {
+      return 'Original price must be greater than zero';
+    }
   }
 
   return '';
@@ -376,6 +552,11 @@ router.post('/', protect, admin, upload.fields([
       );
     }
 
+    const payloadError = validateProductPayload(payload);
+    if (payloadError) {
+      return res.status(400).json({ message: payloadError });
+    }
+
     if (!payload.image || !Array.isArray(payload.images) || payload.images.length === 0) {
       return res.status(400).json({ message: 'Please provide at least one image URL or upload image file(s)' });
     }
@@ -397,6 +578,11 @@ router.post('/', protect, admin, upload.fields([
     const createdProduct = await product.save();
     res.status(201).json(createdProduct);
   } catch (error) {
+    const uploadError = getUploadErrorMessage(error);
+    if (uploadError) {
+      return res.status(400).json({ message: uploadError });
+    }
+
     res.status(500).json({ message: error.message });
   }
 });
@@ -410,6 +596,11 @@ router.put('/:id', protect, admin, upload.fields([
     const product = await Product.findById(req.params.id);
     if (product) {
       const payload = normalizeProductPayload(req, product);
+
+      const payloadError = validateProductPayload(payload, { isUpdate: true });
+      if (payloadError) {
+        return res.status(400).json({ message: payloadError });
+      }
 
       if (payload.sizeStock !== undefined && payload.sizePricing === undefined) {
         const fallbackPrice = payload.price !== undefined ? payload.price : product.price;
@@ -461,6 +652,11 @@ router.put('/:id', protect, admin, upload.fields([
       res.status(404).json({ message: 'Product not found' });
     }
   } catch (error) {
+    const uploadError = getUploadErrorMessage(error);
+    if (uploadError) {
+      return res.status(400).json({ message: uploadError });
+    }
+
     res.status(500).json({ message: error.message });
   }
 });

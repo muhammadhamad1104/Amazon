@@ -27,7 +27,7 @@ const ProductCard = ({ product }) => {
     <Link to={`/product/${product._id}`} className="product-card">
       <div className="product-image-container">
         <img src={resolveImageUrl(product.image)} alt={product.name} className="product-image" />
-        {product.stock === 0 && <div className="out-of-stock-badge">Out of Stock</div>}
+        {Number(product.stock || 0) <= 0 && <div className="out-of-stock-badge">Out of Stock</div>}
         {product.featured && <div className="featured-badge">Featured</div>}
       </div>
       

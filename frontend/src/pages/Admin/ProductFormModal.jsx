@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { FaTimes } from 'react-icons/fa';
+import { useEffect, useRef, useState } from 'react';
+import { FaGripVertical, FaTimes } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import {
   PRODUCT_CATEGORY_OPTIONS,
@@ -21,13 +21,46 @@ const createInitialSizePricing = () => ({});
 
 const createInitialSizeOptions = () => [...DEFAULT_SIZE_OPTIONS];
 
-const createInitialImageUrls = (product = null) => {
+const toTrimmedString = (value) => String(value || '').trim();
+
+const createImageItemId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  return `img-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
+const createUrlImageItem = (url = '') => ({
+  id: createImageItemId(),
+  type: 'url',
+  url: toTrimmedString(url)
+});
+
+const createFileImageItem = (file) => ({
+  id: createImageItemId(),
+  type: 'file',
+  file,
+  previewUrl: URL.createObjectURL(file)
+});
+
+const revokeFilePreview = (imageItem) => {
+  if (imageItem?.type === 'file' && imageItem.previewUrl) {
+    URL.revokeObjectURL(imageItem.previewUrl);
+  }
+};
+
+const createInitialImageItems = (product = null) => {
   const normalizedImages = [...new Set([
     ...(Array.isArray(product?.images) ? product.images : []),
     product?.image
-  ].map((image) => String(image || '').trim()).filter(Boolean))].slice(0, MAX_PRODUCT_IMAGES);
+  ].map((image) => toTrimmedString(image)).filter(Boolean))].slice(0, MAX_PRODUCT_IMAGES);
 
-  return normalizedImages.length > 0 ? normalizedImages : [''];
+  if (normalizedImages.length === 0) {
+    return [createUrlImageItem('')];
+  }
+
+  return normalizedImages.map((image) => createUrlImageItem(image));
 };
 
 const toEditableSizePricing = (product = null) => {
@@ -79,26 +112,33 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
     category: '',
     subcategory: '',
     sizePricing: createInitialSizePricing(),
-    imageUrls: [''],
-    featured: false
+    featured: false,
+    soldOut: false
   });
   const [imageMode, setImageMode] = useState('url');
-  const [imageFiles, setImageFiles] = useState([]);
-  const [filePreviews, setFilePreviews] = useState([]);
+  const [imageItems, setImageItems] = useState([createUrlImageItem('')]);
+  const [draggedImageId, setDraggedImageId] = useState('');
   const [sizeOptions, setSizeOptions] = useState(createInitialSizeOptions());
   const [newSizeInput, setNewSizeInput] = useState('');
   const [saving, setSaving] = useState(false);
+  const imageItemsRef = useRef(imageItems);
 
   const categories = PRODUCT_CATEGORY_OPTIONS;
   const subcategories = getSubcategoryOptions(formData.category);
 
   useEffect(() => {
-    return () => {
-      filePreviews.forEach((previewUrl) => URL.revokeObjectURL(previewUrl));
-    };
-  }, [filePreviews]);
+    imageItemsRef.current = imageItems;
+  }, [imageItems]);
 
   useEffect(() => {
+    return () => {
+      imageItemsRef.current.forEach((imageItem) => revokeFilePreview(imageItem));
+    };
+  }, []);
+
+  useEffect(() => {
+    const nextImageItems = createInitialImageItems(product);
+
     if (product) {
       const editableSizePricing = toEditableSizePricing(product);
       const productSizeOptions = sortSizeKeys([
@@ -113,8 +153,8 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
         category: product.category || '',
         subcategory: product.subcategory || '',
         sizePricing: editableSizePricing,
-        imageUrls: createInitialImageUrls(product),
-        featured: product.featured || false
+        featured: product.featured || false,
+        soldOut: Number(product.stock || 0) <= 0
       });
       setSizeOptions(productSizeOptions);
     } else {
@@ -125,16 +165,19 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
         category: '',
         subcategory: '',
         sizePricing: createInitialSizePricing(),
-        imageUrls: [''],
-        featured: false
+        featured: false,
+        soldOut: false
       });
       setSizeOptions(createInitialSizeOptions());
     }
 
     setNewSizeInput('');
     setImageMode('url');
-    setImageFiles([]);
-    setFilePreviews([]);
+    setDraggedImageId('');
+    setImageItems((previousItems) => {
+      previousItems.forEach((imageItem) => revokeFilePreview(imageItem));
+      return nextImageItems;
+    });
   }, [product]);
 
   const handleChange = (event) => {
@@ -155,30 +198,109 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
     }));
   };
 
-  const clearSelectedImageFiles = () => {
-    filePreviews.forEach((previewUrl) => URL.revokeObjectURL(previewUrl));
-    setImageFiles([]);
-    setFilePreviews([]);
-  };
-
   const handleImageModeChange = (mode) => {
     setImageMode(mode);
+  };
 
-    if (mode === 'url') {
-      clearSelectedImageFiles();
+  const getConfiguredImageItems = (items = imageItems) => {
+    return items.filter((item) => {
+      if (item.type === 'file') {
+        return item.file instanceof File;
+      }
+
+      return Boolean(toTrimmedString(item.url));
+    });
+  };
+
+  const addImageUrlField = () => {
+    setImageItems((previousItems) => {
+      const configuredCount = getConfiguredImageItems(previousItems).length;
+      if (configuredCount >= MAX_PRODUCT_IMAGES) {
+        toast.error(`You can add maximum ${MAX_PRODUCT_IMAGES} images`);
+        return previousItems;
+      }
+
+      return [...previousItems, createUrlImageItem('')];
+    });
+  };
+
+  const handleImageUrlChange = (itemId, value) => {
+    setImageItems((previousItems) => previousItems.map((item) => {
+      if (item.id !== itemId || item.type !== 'url') {
+        return item;
+      }
+
+      return {
+        ...item,
+        url: value
+      };
+    }));
+  };
+
+  const removeImageItem = (itemId) => {
+    setImageItems((previousItems) => {
+      const removedItem = previousItems.find((item) => item.id === itemId);
+      if (!removedItem) {
+        return previousItems;
+      }
+
+      revokeFilePreview(removedItem);
+
+      const remainingItems = previousItems.filter((item) => item.id !== itemId);
+      if (remainingItems.length === 0) {
+        return [createUrlImageItem('')];
+      }
+
+      return remainingItems;
+    });
+  };
+
+  const moveImageItem = (sourceItemId, targetItemId) => {
+    if (!sourceItemId || !targetItemId || sourceItemId === targetItemId) {
+      return;
     }
+
+    setImageItems((previousItems) => {
+      const sourceIndex = previousItems.findIndex((item) => item.id === sourceItemId);
+      const targetIndex = previousItems.findIndex((item) => item.id === targetItemId);
+
+      if (sourceIndex < 0 || targetIndex < 0) {
+        return previousItems;
+      }
+
+      const nextItems = [...previousItems];
+      const [movedItem] = nextItems.splice(sourceIndex, 1);
+      nextItems.splice(targetIndex, 0, movedItem);
+      return nextItems;
+    });
+  };
+
+  const handleImageDragStart = (event, itemId) => {
+    setDraggedImageId(itemId);
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', itemId);
+  };
+
+  const handleImageDragOver = (event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleImageDrop = (event, targetItemId) => {
+    event.preventDefault();
+    const sourceItemId = event.dataTransfer.getData('text/plain') || draggedImageId;
+    moveImageItem(sourceItemId, targetItemId);
+    setDraggedImageId('');
+  };
+
+  const handleImageDragEnd = () => {
+    setDraggedImageId('');
   };
 
   const handleImageFilesChange = (event) => {
     const nextFiles = Array.from(event.target.files || []);
 
     if (nextFiles.length === 0) {
-      clearSelectedImageFiles();
-      return;
-    }
-
-    if (nextFiles.length > MAX_PRODUCT_IMAGES) {
-      toast.error(`You can upload maximum ${MAX_PRODUCT_IMAGES} images`);
       return;
     }
 
@@ -194,46 +316,27 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
       }
     }
 
-    clearSelectedImageFiles();
-    setImageFiles(nextFiles);
-    setFilePreviews(nextFiles.map((file) => URL.createObjectURL(file)));
-  };
+    const configuredCount = getConfiguredImageItems().length;
+    const remainingSlots = MAX_PRODUCT_IMAGES - configuredCount;
 
-  const handleImageUrlChange = (index, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      imageUrls: prev.imageUrls.map((url, urlIndex) => (urlIndex === index ? value : url))
-    }));
-  };
+    if (remainingSlots <= 0) {
+      toast.error(`Maximum ${MAX_PRODUCT_IMAGES} images are allowed`);
+      event.target.value = '';
+      return;
+    }
 
-  const addImageUrlField = () => {
-    setFormData((prev) => {
-      if (prev.imageUrls.length >= MAX_PRODUCT_IMAGES) {
-        toast.error(`You can add maximum ${MAX_PRODUCT_IMAGES} image URLs`);
-        return prev;
-      }
+    if (nextFiles.length > remainingSlots) {
+      toast.error(`You can only add ${remainingSlots} more image(s)`);
+      event.target.value = '';
+      return;
+    }
 
-      return {
-        ...prev,
-        imageUrls: [...prev.imageUrls, '']
-      };
-    });
-  };
+    setImageItems((previousItems) => ([
+      ...previousItems,
+      ...nextFiles.map((file) => createFileImageItem(file))
+    ]));
 
-  const removeImageUrlField = (index) => {
-    setFormData((prev) => {
-      if (prev.imageUrls.length <= 1) {
-        return {
-          ...prev,
-          imageUrls: ['']
-        };
-      }
-
-      return {
-        ...prev,
-        imageUrls: prev.imageUrls.filter((_, urlIndex) => urlIndex !== index)
-      };
-    });
+    event.target.value = '';
   };
 
   const selectedSizes = sortSizeKeys(Object.keys(formData.sizePricing || {}));
@@ -359,10 +462,11 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
         return;
       }
 
+      const variantQuantity = formData.soldOut ? 0 : parsedColors.length;
+
       sizePricingPayload[size] = {
         colors: parsedColors,
-        // Quantity is auto-derived from colors for backward compatibility.
-        quantity: parsedColors.length,
+        quantity: variantQuantity,
         originalPrice: parsedOriginalPrice,
         price: parsedNewPrice
       };
@@ -372,14 +476,30 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
       !current || candidate.price < current.price ? candidate : current
     ), null);
 
-    const totalStock = Object.values(sizePricingPayload).reduce(
-      (sum, variant) => sum + variant.colors.length,
-      0
-    );
+    const totalStock = formData.soldOut
+      ? 0
+      : Object.values(sizePricingPayload).reduce((sum, variant) => sum + Number(variant.quantity || 0), 0);
 
-    const normalizedImageUrls = normalizeImageUrls(formData.imageUrls || []);
-    const selectedFilesCount = imageFiles.length;
-    const requestedImageCount = normalizedImageUrls.length + selectedFilesCount;
+    const orderedImageItems = getConfiguredImageItems();
+    const requestedImageCount = orderedImageItems.length;
+
+    const orderedUrlItems = orderedImageItems
+      .filter((item) => item.type === 'url')
+      .map((item) => toTrimmedString(item.url));
+
+    const normalizedImageUrls = normalizeImageUrls(orderedUrlItems);
+    const orderedFileItems = orderedImageItems
+      .filter((item) => item.type === 'file' && item.file instanceof File);
+
+    const imageOrderPayload = orderedImageItems.map((item) => {
+      if (item.type === 'file') {
+        return { type: 'file', value: item.id };
+      }
+
+      return { type: 'url', value: toTrimmedString(item.url) };
+    });
+
+    const imageFileIds = orderedFileItems.map((item) => item.id);
 
     if (requestedImageCount === 0) {
       toast.error('Please add at least one product image');
@@ -399,20 +519,27 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
     payload.append('subcategory', formData.subcategory || '');
     payload.append('sizePricing', JSON.stringify(sizePricingPayload));
     payload.append('sizeStock', JSON.stringify(Object.fromEntries(
-      Object.entries(sizePricingPayload).map(([size, variant]) => [size, variant.colors.length])
+      Object.entries(sizePricingPayload).map(([size, variant]) => [size, Number(variant.quantity || 0)])
     )));
     payload.append('price', String(displayVariant?.price || 0));
     payload.append('originalPrice', String(displayVariant?.originalPrice || displayVariant?.price || 0));
     payload.append('stock', String(totalStock));
     payload.append('featured', String(Boolean(formData.featured)));
+    payload.append('forceSoldOut', String(Boolean(formData.soldOut)));
+    payload.append('keepExistingImages', String(Boolean(product)));
     payload.append('imageUrls', JSON.stringify(normalizedImageUrls));
+    payload.append('imageOrder', JSON.stringify(imageOrderPayload));
+    payload.append('imageFileIds', JSON.stringify(imageFileIds));
 
-    if (normalizedImageUrls.length > 0) {
+    const firstOrderedUrl = imageOrderPayload.find((entry) => entry.type === 'url')?.value;
+    if (firstOrderedUrl) {
+      payload.append('imageUrl', firstOrderedUrl);
+    } else if (normalizedImageUrls.length > 0) {
       payload.append('imageUrl', normalizedImageUrls[0]);
     }
 
-    imageFiles.forEach((file) => {
-      payload.append('imageFiles', file);
+    orderedFileItems.forEach((imageItem) => {
+      payload.append('imageFiles', imageItem.file);
     });
 
     setSaving(true);
@@ -425,10 +552,10 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
     }
   };
 
-  const activeImageUrls = normalizeImageUrls(formData.imageUrls || []);
-  const previewImages = filePreviews.length > 0
-    ? filePreviews
-    : activeImageUrls.map((url) => resolveImageUrl(url)).filter(Boolean);
+  const urlImageItems = imageItems.filter((item) => item.type === 'url');
+  const configuredImageItems = getConfiguredImageItems();
+  const fileItemsCount = imageItems.filter((item) => item.type === 'file').length;
+  const canAddMoreImages = configuredImageItems.length < MAX_PRODUCT_IMAGES;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -612,6 +739,7 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
 
           <div className="form-field">
             <label>Product Images (max {MAX_PRODUCT_IMAGES}) *</label>
+            <p className="image-help-text">Drag and drop image previews below to set display order.</p>
             <div className="image-mode-toggle">
               <label className="mode-option">
                 <input
@@ -637,19 +765,19 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
 
             {imageMode === 'url' ? (
               <div className="image-url-list">
-                {formData.imageUrls.map((url, index) => (
-                  <div key={`image-url-${index}`} className="image-url-row">
+                {urlImageItems.map((imageItem, index) => (
+                  <div key={imageItem.id} className="image-url-row">
                     <input
                       type="url"
-                      value={url}
-                      onChange={(event) => handleImageUrlChange(index, event.target.value)}
+                      value={imageItem.url}
+                      onChange={(event) => handleImageUrlChange(imageItem.id, event.target.value)}
                       placeholder={`https://example.com/image-${index + 1}.jpg`}
                     />
                     <button
                       type="button"
                       className="remove-image-url-btn"
-                      onClick={() => removeImageUrlField(index)}
-                      disabled={formData.imageUrls.length <= 1}
+                      onClick={() => removeImageItem(imageItem.id)}
+                      disabled={urlImageItems.length <= 1 && fileItemsCount === 0}
                     >
                       Remove
                     </button>
@@ -659,45 +787,92 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
                   type="button"
                   className="add-image-url-btn"
                   onClick={addImageUrlField}
-                  disabled={formData.imageUrls.length >= MAX_PRODUCT_IMAGES}
+                  disabled={!canAddMoreImages}
                 >
                   Add Image URL
                 </button>
               </div>
             ) : (
-              <input
-                type="file"
-                id="imageFiles"
-                name="imageFiles"
-                accept="image/*"
-                multiple
-                onChange={handleImageFilesChange}
-              />
+              <div className="file-upload-panel">
+                <input
+                  type="file"
+                  id="imageFiles"
+                  name="imageFiles"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageFilesChange}
+                  disabled={!canAddMoreImages}
+                />
+                <small>
+                  You can add up to {MAX_PRODUCT_IMAGES} images total. Existing images stay unless you remove them.
+                </small>
+              </div>
             )}
 
-            {previewImages.length > 0 && (
+            {configuredImageItems.length > 0 && (
               <div className="image-preview-grid">
-                {previewImages.map((image, index) => (
-                  <img
-                    key={`preview-${index}`}
-                    src={image}
-                    alt={`Preview ${index + 1}`}
-                  />
-                ))}
+                {configuredImageItems.map((imageItem, index) => {
+                  const previewSource = imageItem.type === 'file'
+                    ? imageItem.previewUrl
+                    : resolveImageUrl(imageItem.url);
+
+                  if (!previewSource) {
+                    return null;
+                  }
+
+                  return (
+                    <div
+                      key={imageItem.id}
+                      className={`image-preview-card ${draggedImageId === imageItem.id ? 'dragging' : ''}`}
+                      draggable
+                      onDragStart={(event) => handleImageDragStart(event, imageItem.id)}
+                      onDragOver={handleImageDragOver}
+                      onDrop={(event) => handleImageDrop(event, imageItem.id)}
+                      onDragEnd={handleImageDragEnd}
+                    >
+                      <span className="image-drag-handle" title="Drag to reorder">
+                        <FaGripVertical aria-hidden="true" />
+                      </span>
+                      <img src={previewSource} alt={`Preview ${index + 1}`} />
+                      <div className="image-preview-meta">
+                        <span>{index + 1}. {imageItem.type === 'file' ? 'Upload' : 'URL'}</span>
+                        <button
+                          type="button"
+                          className="remove-image-btn"
+                          onClick={() => removeImageItem(imageItem.id)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
 
           <div className="form-field checkbox-field">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                name="featured"
-                checked={formData.featured}
-                onChange={handleChange}
-              />
-              <span>Mark as Featured Product</span>
-            </label>
+            <div className="checkbox-group">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  name="featured"
+                  checked={formData.featured}
+                  onChange={handleChange}
+                />
+                <span>Mark as Featured Product</span>
+              </label>
+
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  name="soldOut"
+                  checked={formData.soldOut}
+                  onChange={handleChange}
+                />
+                <span>Mark as Sold Out (keep product visible)</span>
+              </label>
+            </div>
           </div>
 
           <div className="form-actions">

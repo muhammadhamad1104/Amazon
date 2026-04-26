@@ -115,7 +115,7 @@ const normalizeVariantQuantity = (variant = {}, colors = []) => {
   const rawQuantity = variant.quantity ?? variant.stock ?? variant.qty;
   const quantity = normalizeStockQuantity(rawQuantity);
 
-  if (quantity > 0) {
+  if (rawQuantity !== undefined && rawQuantity !== null && String(rawQuantity).trim() !== '') {
     return quantity;
   }
 
@@ -151,8 +151,14 @@ export const normalizeSizePricingMap = (
       variant.quantity ?? variant.stock ?? variant.qty
     );
 
+    const hasExplicitQuantity = (
+      variant.quantity !== undefined
+      || variant.stock !== undefined
+      || variant.qty !== undefined
+    );
+
     const quantity = normalizeVariantQuantity(variant, colors);
-    if (quantity <= 0 && colors.length === 0) return;
+    if (!hasExplicitQuantity && quantity <= 0 && colors.length === 0) return;
 
     let price = normalizePriceValue(
       variant.price ?? normalizedFallbackPrice ?? normalizedFallbackOriginalPrice
@@ -174,11 +180,11 @@ export const normalizeSizePricingMap = (
 
     const normalizedColors = colors.length > 0
       ? colors
-      : [DEFAULT_VARIANT_COLOR];
+      : (hasExplicitQuantity && quantity === 0 ? [] : [DEFAULT_VARIANT_COLOR]);
 
-    const normalizedQuantity = quantity > 0
+    const normalizedQuantity = hasExplicitQuantity
       ? quantity
-      : normalizedColors.length;
+      : (quantity > 0 ? quantity : normalizedColors.length);
 
     normalized[size] = {
       colors: normalizedColors,

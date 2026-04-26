@@ -277,6 +277,14 @@
   gap: 2rem;
 }
 
+.products-grid > * {
+  min-width: 0;
+}
+
+.products-grid .product-card {
+  width: 100%;
+}
+
 .no-products {
   text-align: center;
   padding: 4rem 2rem;

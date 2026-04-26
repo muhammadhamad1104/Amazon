@@ -227,7 +227,7 @@ const ProductsManagement = () => {
                   </td>
                   <td data-label="Stock">
                     <span className={`stock-tag ${product.stock > 10 ? 'high' : product.stock > 0 ? 'low' : 'out'}`}>
-                      {product.stock} units
+                      {product.stock > 0 ? `${product.stock} units` : 'Sold Out'}
                     </span>
                     <div className="size-breakdown">{getSizeStockSummary(product)}</div>
                   </td>

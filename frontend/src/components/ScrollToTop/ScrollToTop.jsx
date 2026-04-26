@@ -8,9 +8,28 @@ const ScrollToTop = () => {
   const [isVisible, setIsVisible] = useState(false);
   const shouldHideButton = location.pathname === '/';
 
+  useEffect(() => {
+    if (!('scrollRestoration' in window.history)) {
+      return undefined;
+    }
+
+    const previousMode = window.history.scrollRestoration;
+    window.history.scrollRestoration = 'manual';
+
+    return () => {
+      window.history.scrollRestoration = previousMode;
+    };
+  }, []);
+
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-  }, [location.pathname, location.search]);
+
+    const frameId = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [location.key]);
 
   useEffect(() => {
     const toggleVisibility = () => {

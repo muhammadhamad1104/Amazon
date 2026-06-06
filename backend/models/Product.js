@@ -73,10 +73,18 @@ const productSchema = new mongoose.Schema({
         default: [],
         set: normalizeColorList
       },
+      colorStock: {
+        type: Map,
+        of: {
+          type: Number,
+          min: 0,
+          set: normalizeStockQuantity
+        },
+        default: () => ({})
+      },
       quantity: {
         type: Number,
         min: 0,
-        // Quantity is retained only for backward compatibility.
         set: normalizeStockQuantity
       },
       price: {

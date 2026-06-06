@@ -21,7 +21,8 @@ import {
   getDisplaySize,
   getProductAvailableSizes,
   getProductSizeStockMap,
-  getSizeColorsForProduct
+  getSizeColorsForProduct,
+  getColorStockForProduct
 } from '../../utils/sizeStock';
 import './ProductDetail.css';
 
@@ -126,6 +127,13 @@ const ProductDetail = () => {
 
     if (!selectedColor) {
       toast.error('Please select a color');
+      return;
+    }
+
+    const activeSizeLabel = getDisplaySize(selectedSize, sizeOptions[0] || 'L');
+    const availableStock = getColorStockForProduct(product, activeSizeLabel, selectedColor);
+    if (availableStock <= 0) {
+      toast.error('This variant is sold out');
       return;
     }
 
@@ -262,6 +270,7 @@ const ProductDetail = () => {
   const activeSize = getDisplaySize(selectedSize, sizeOptions[0] || 'L');
   const sizeColors = getSizeColorsForProduct(product, activeSize);
   const activeColor = sizeColors.includes(selectedColor) ? selectedColor : (sizeColors[0] || '');
+  const activeColorStock = getColorStockForProduct(product, activeSize, activeColor);
 
   return (
     <div className="product-detail-page">
@@ -345,12 +354,10 @@ const ProductDetail = () => {
           </div>
 
           <div className="stock-info">
-            {totalStock > 0 ? (
-              <>
-                <span className="in-stock">✓ In Stock</span>
-              </>
+            {activeColorStock > 0 ? (
+              <span className="in-stock">✓ In Stock ({activeColorStock} available)</span>
             ) : (
-              <span className="out-of-stock">✕ Out of Stock</span>
+              <span className="out-of-stock">✕ Sold Out</span>
             )}
           </div>
 
@@ -406,13 +413,27 @@ const ProductDetail = () => {
                 </div>
               </div>
 
+              <div className="size-stock-breakdown">
+                <span className="breakdown-title">Available stock for Size {activeSize}:</span>
+                <div className="breakdown-list">
+                  {sizeColors.map((color) => {
+                    const stock = getColorStockForProduct(product, activeSize, color);
+                    return (
+                      <span key={color} className={`breakdown-item ${stock === 0 ? 'out' : ''}`}>
+                        {color}: <strong>{stock > 0 ? stock : 'Sold Out'}</strong>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+
               <button
                 type="button"
                 onClick={handleAddToCart}
                 className="add-to-cart-btn"
-                disabled={!activeColor || isAddingToCart}
+                disabled={!activeColor || activeColorStock <= 0 || isAddingToCart}
               >
-                <FaShoppingCart /> {isAddingToCart ? 'Adding...' : 'Add to Cart'}
+                <FaShoppingCart /> {isAddingToCart ? 'Adding...' : (activeColorStock <= 0 ? 'Sold Out' : 'Add to Cart')}
               </button>
             </div>
           )}

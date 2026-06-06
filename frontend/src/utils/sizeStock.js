@@ -182,12 +182,30 @@ export const normalizeSizePricingMap = (
       ? colors
       : (hasExplicitQuantity && quantity === 0 ? [] : [DEFAULT_VARIANT_COLOR]);
 
-    const normalizedQuantity = hasExplicitQuantity
-      ? quantity
-      : (quantity > 0 ? quantity : normalizedColors.length);
+    // Normalize and build colorStock map
+    const colorStock = {};
+    const rawColorStock = toPlainObject(variant.colorStock || {});
+
+    normalizedColors.forEach((color) => {
+      const colorKey = Object.keys(rawColorStock).find(
+        (key) => String(key).trim().toLowerCase() === color.toLowerCase()
+      );
+      if (colorKey !== undefined) {
+        colorStock[color] = normalizeStockQuantity(rawColorStock[colorKey]);
+      } else {
+        colorStock[color] = normalizedColors.length === 1
+          ? normalizeStockQuantity(variant.quantity ?? variant.stock ?? variant.qty ?? 1)
+          : 1;
+      }
+    });
+
+    const normalizedQuantity = normalizedColors.length > 0
+      ? Object.values(colorStock).reduce((sum, q) => sum + q, 0)
+      : (hasExplicitQuantity ? quantity : 0);
 
     normalized[size] = {
       colors: normalizedColors,
+      colorStock,
       quantity: normalizedQuantity,
       price,
       originalPrice
@@ -206,8 +224,15 @@ export const normalizeSizePricingMap = (
 
     if (quantity <= 0 || price <= 0 || originalPrice <= 0) return;
 
+    const fallbackColors = normalizeVariantColors({}, quantity);
+    const colorStock = {};
+    fallbackColors.forEach((color) => {
+      colorStock[color] = quantity;
+    });
+
     normalized[size] = {
-      colors: normalizeVariantColors({}, quantity),
+      colors: fallbackColors,
+      colorStock,
       quantity,
       price,
       originalPrice
@@ -308,6 +333,7 @@ export const getSizePricingForProduct = (product, size) => {
     return {
       size: normalizedSize,
       colors: selectedColors,
+      colorStock: selectedVariant.colorStock || {},
       quantity: normalizeVariantQuantity(selectedVariant, selectedColors),
       price: normalizePriceValue(selectedVariant.price),
       originalPrice: normalizePriceValue(
@@ -327,6 +353,7 @@ export const getSizePricingForProduct = (product, size) => {
     return {
       size: firstSize,
       colors: firstColors,
+      colorStock: firstVariant.colorStock || {},
       quantity: normalizeVariantQuantity(firstVariant, firstColors),
       price: normalizePriceValue(firstVariant.price),
       originalPrice: normalizePriceValue(firstVariant.originalPrice || firstVariant.price)
@@ -339,6 +366,7 @@ export const getSizePricingForProduct = (product, size) => {
   return {
     size: normalizedSize || 'L',
     colors: [],
+    colorStock: {},
     quantity: 0,
     price: fallbackPrice || fallbackOriginalPrice,
     originalPrice: fallbackOriginalPrice || fallbackPrice
@@ -360,4 +388,33 @@ export const isColorAvailableForProduct = (product, size, color) => {
 
   const availableColors = getSizeColorsForProduct(product, size);
   return availableColors.some((candidate) => normalizeColorKey(candidate) === normalizeColorKey(normalizedColor));
+};
+
+export const getColorStockForProduct = (product, size, color) => {
+  const sizePricing = getSizePricingForProduct(product, size);
+  const colorStock = sizePricing.colorStock || {};
+  const normalizedColor = normalizeColorLabel(color || 'Default');
+  
+  if (!normalizedColor) return 0;
+  
+  const matchingKey = Object.keys(colorStock).find(
+    (k) => String(k).trim().toLowerCase() === normalizedColor.toLowerCase()
+  );
+  if (matchingKey !== undefined) {
+    return Number(colorStock[matchingKey] || 0);
+  }
+  
+  const availableColors = sizePricing.colors || [];
+  const hasColor = availableColors.some(
+    (c) => String(c).trim().toLowerCase() === normalizedColor.toLowerCase()
+  );
+  if (hasColor) {
+    return Number(sizePricing.quantity || 0);
+  }
+  
+  if (normalizedColor.toLowerCase() === 'default' && (availableColors.length === 0 || availableColors.some((c) => c.toLowerCase() === 'default'))) {
+    return Number(sizePricing.quantity || 0);
+  }
+  
+  return 0;
 };

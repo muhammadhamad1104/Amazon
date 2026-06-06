@@ -38,9 +38,17 @@ const ProductsManagement = () => {
     }
 
     return sizes.map((size) => {
-      const colors = sizePricingMap[size]?.colors || [];
-      return `${size}: ${colors.join(', ') || 'Default'}`;
-    }).join('  ');
+      const variant = sizePricingMap[size] || {};
+      const colors = variant.colors || [];
+      const colorStock = variant.colorStock || {};
+      
+      const colorSummary = colors.map((color) => {
+        const qty = colorStock[color] !== undefined ? colorStock[color] : (variant.quantity || 0);
+        return `${color} (${qty})`;
+      }).join(', ');
+
+      return `${size}: [${colorSummary}]`;
+    }).join('  |  ');
   };
 
   useEffect(() => {

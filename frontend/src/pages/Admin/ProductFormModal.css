@@ -558,3 +558,93 @@
     width: 100%;
   }
 }
+
+/* Color & Stock Pair Inputs Styling */
+.size-colors-stock-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  background: #f1f5f9;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px dashed #cbd5e1;
+}
+
+.section-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #475569;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.2rem;
+}
+
+.colors-stock-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.color-stock-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.color-name-input {
+  flex: 2;
+  padding: 0.4rem 0.6rem !important;
+  font-size: 0.85rem !important;
+  border-radius: 6px !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.color-qty-input {
+  flex: 1;
+  padding: 0.4rem 0.6rem !important;
+  font-size: 0.85rem !important;
+  border-radius: 6px !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.remove-color-row-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.remove-color-row-btn:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+.add-color-row-btn {
+  align-self: flex-start;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  color: #ff9900;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 0.3rem;
+}
+
+.add-color-row-btn:hover {
+  background: #ff9900;
+  color: white;
+  border-color: #ff9900;
+}
+

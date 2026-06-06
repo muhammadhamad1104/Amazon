@@ -72,8 +72,26 @@ const toEditableSizePricing = (product = null) => {
   );
 
   return Object.entries(normalized).reduce((accumulator, [size, variant]) => {
+    let colorStockList = [];
+    const colorStock = variant.colorStock || {};
+    const colors = variant.colors || [];
+
+    if (colors.length > 0) {
+      colors.forEach((color) => {
+        let qty = 1;
+        if (colorStock && colorStock[color] !== undefined) {
+          qty = Number(colorStock[color]);
+        } else if (variant.quantity !== undefined) {
+          qty = colors.length === 1 ? variant.quantity : 1;
+        }
+        colorStockList.push({ color, quantity: qty });
+      });
+    } else {
+      colorStockList.push({ color: 'Default', quantity: variant.quantity || 0 });
+    }
+
     accumulator[size] = {
-      colors: (variant.colors || []).join(', '),
+      colorStockList,
       originalPrice: String(variant.originalPrice || 0),
       price: String(variant.price || 0)
     };
@@ -90,7 +108,7 @@ const getDefaultVariantPricing = (sizePricing = {}) => {
   const fallbackOriginalPrice = existingVariant?.originalPrice || fallbackPrice || '';
 
   return {
-    colors: '',
+    colorStockList: [{ color: 'Default', quantity: 1 }],
     originalPrice: String(fallbackOriginalPrice),
     price: String(fallbackPrice)
   };
@@ -382,7 +400,64 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
     setNewSizeInput('');
   };
 
-  const handleSizePricingChange = (size, field, value) => {
+  const handleAddColorRow = (size) => {
+    setFormData((prev) => {
+      const currentVariant = prev.sizePricing?.[size] || getDefaultVariantPricing(prev.sizePricing || {});
+      const nextList = [...(currentVariant.colorStockList || [])];
+      nextList.push({ color: '', quantity: 1 });
+      return {
+        ...prev,
+        sizePricing: {
+          ...prev.sizePricing,
+          [size]: {
+            ...currentVariant,
+            colorStockList: nextList
+          }
+        }
+      };
+    });
+  };
+
+  const handleRemoveColorRow = (size, index) => {
+    setFormData((prev) => {
+      const currentVariant = prev.sizePricing?.[size] || {};
+      const nextList = [...(currentVariant.colorStockList || [])];
+      nextList.splice(index, 1);
+      return {
+        ...prev,
+        sizePricing: {
+          ...prev.sizePricing,
+          [size]: {
+            ...currentVariant,
+            colorStockList: nextList
+          }
+        }
+      };
+    });
+  };
+
+  const handleColorRowChange = (size, index, field, value) => {
+    setFormData((prev) => {
+      const currentVariant = prev.sizePricing?.[size] || {};
+      const nextList = [...(currentVariant.colorStockList || [])];
+      nextList[index] = {
+        ...nextList[index],
+        [field]: field === 'quantity' ? Math.max(0, parseInt(value) || 0) : value
+      };
+      return {
+        ...prev,
+        sizePricing: {
+          ...prev.sizePricing,
+          [size]: {
+            ...currentVariant,
+            colorStockList: nextList
+          }
+        }
+      };
+    });
+  };
+
+  const handleSizePriceChange = (size, field, value) => {
     const normalizedSize = normalizeSizeLabel(size);
     if (!normalizedSize) return;
 
@@ -398,23 +473,17 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
     }));
   };
 
-  const handleSizePricingBlur = (size, field) => {
+  const handleSizePriceBlur = (size, field) => {
     const normalizedSize = normalizeSizeLabel(size);
     if (!normalizedSize) return;
 
     setFormData((prev) => {
       const currentVariant = prev.sizePricing?.[normalizedSize] || getDefaultVariantPricing(prev.sizePricing || {});
       const currentValue = currentVariant[field] ?? '';
-
-      let normalizedValue = currentValue;
-      if (field === 'colors') {
-        normalizedValue = normalizeColorList(currentValue).join(', ');
-      } else {
-        const parsedPrice = Number(currentValue);
-        normalizedValue = Number.isFinite(parsedPrice) && parsedPrice > 0
-          ? String(parsedPrice)
-          : '';
-      }
+      const parsedPrice = Number(currentValue);
+      const normalizedValue = Number.isFinite(parsedPrice) && parsedPrice > 0
+        ? String(parsedPrice)
+        : '';
 
       return {
         ...prev,
@@ -443,14 +512,37 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
 
     for (const size of activeSizes) {
       const sizeVariant = formData.sizePricing?.[size] || {};
-      const parsedColors = normalizeColorList(sizeVariant.colors || '');
-      const parsedOriginalPrice = Number(sizeVariant.originalPrice || 0);
-      const parsedNewPrice = Number(sizeVariant.price || 0);
+      const colorStockList = sizeVariant.colorStockList || [];
 
-      if (parsedColors.length === 0) {
+      if (colorStockList.length === 0) {
         toast.error(`Please add at least one color for size ${size}`);
         return;
       }
+
+      const parsedColors = [];
+      const parsedColorStock = {};
+      let sizeQuantity = 0;
+
+      for (const item of colorStockList) {
+        const colorName = String(item.color || '').trim();
+        if (!colorName) {
+          toast.error(`Please specify the color name for size ${size}`);
+          return;
+        }
+
+        if (parsedColors.includes(colorName)) {
+          toast.error(`Duplicate color "${colorName}" specified for size ${size}`);
+          return;
+        }
+
+        const qty = formData.soldOut ? 0 : Number(item.quantity || 0);
+        parsedColors.push(colorName);
+        parsedColorStock[colorName] = qty;
+        sizeQuantity += qty;
+      }
+
+      const parsedOriginalPrice = Number(sizeVariant.originalPrice || 0);
+      const parsedNewPrice = Number(sizeVariant.price || 0);
 
       if (!Number.isFinite(parsedOriginalPrice) || parsedOriginalPrice <= 0) {
         toast.error(`Please enter a valid original price for size ${size}`);
@@ -462,11 +554,10 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
         return;
       }
 
-      const variantQuantity = formData.soldOut ? 0 : parsedColors.length;
-
       sizePricingPayload[size] = {
         colors: parsedColors,
-        quantity: variantQuantity,
+        colorStock: parsedColorStock,
+        quantity: sizeQuantity,
         originalPrice: parsedOriginalPrice,
         price: parsedNewPrice
       };
@@ -684,18 +775,50 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
               <div className="size-stock-grid">
                 {selectedSizes.map((size) => (
                   <div key={size} className="size-stock-field">
-                    <span>{size}</span>
-                    <label className="size-metric-group">
-                      <small>Colors</small>
-                      <input
-                        type="text"
-                        value={formData.sizePricing?.[size]?.colors || ''}
-                        onChange={(event) => handleSizePricingChange(size, 'colors', event.target.value)}
-                        onBlur={() => handleSizePricingBlur(size, 'colors')}
-                        placeholder="Red, Green, Blue"
-                        required
-                      />
-                    </label>
+                    <span>Size: {size}</span>
+                    
+                    <div className="size-colors-stock-section">
+                      <small className="section-label">Colors & Quantities</small>
+                      <div className="colors-stock-list">
+                        {(formData.sizePricing?.[size]?.colorStockList || []).map((item, index) => (
+                          <div key={index} className="color-stock-row">
+                            <input
+                              type="text"
+                              placeholder="Color (e.g. Green)"
+                              value={item.color}
+                              onChange={(event) => handleColorRowChange(size, index, 'color', event.target.value)}
+                              required
+                              className="color-name-input"
+                            />
+                            <input
+                              type="number"
+                              placeholder="Qty"
+                              min="0"
+                              value={item.quantity}
+                              onChange={(event) => handleColorRowChange(size, index, 'quantity', event.target.value)}
+                              required
+                              className="color-qty-input"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveColorRow(size, index)}
+                              className="remove-color-row-btn"
+                              title="Remove color"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleAddColorRow(size)}
+                        className="add-color-row-btn"
+                      >
+                        + Add Color
+                      </button>
+                    </div>
+
                     <label className="size-metric-group">
                       <small>Original Price</small>
                       <input
@@ -703,8 +826,8 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
                         min="0"
                         step="0.01"
                         value={formData.sizePricing?.[size]?.originalPrice || ''}
-                        onChange={(event) => handleSizePricingChange(size, 'originalPrice', event.target.value)}
-                        onBlur={() => handleSizePricingBlur(size, 'originalPrice')}
+                        onChange={(event) => handleSizePriceChange(size, 'originalPrice', event.target.value)}
+                        onBlur={() => handleSizePriceBlur(size, 'originalPrice')}
                         placeholder="Old price"
                         required
                       />
@@ -716,8 +839,8 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
                         min="0"
                         step="0.01"
                         value={formData.sizePricing?.[size]?.price || ''}
-                        onChange={(event) => handleSizePricingChange(size, 'price', event.target.value)}
-                        onBlur={() => handleSizePricingBlur(size, 'price')}
+                        onChange={(event) => handleSizePriceChange(size, 'price', event.target.value)}
+                        onBlur={() => handleSizePriceBlur(size, 'price')}
                         placeholder="New price"
                         required
                       />
@@ -730,10 +853,7 @@ const ProductFormModal = ({ product, onSave, onClose }) => {
             )}
 
             <p className="size-stock-total">
-              Total colors across sizes: {selectedSizes.reduce(
-                (sum, size) => sum + normalizeColorList(formData.sizePricing?.[size]?.colors || '').length,
-                0
-              )}
+              Total unique sizes: {selectedSizes.length}
             </p>
           </div>
 

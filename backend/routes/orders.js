@@ -12,7 +12,8 @@ import {
   getSizePricingForProduct,
   isColorAvailableForProduct,
   normalizeColorLabel,
-  normalizeSizeLabel
+  normalizeSizeLabel,
+  getColorStockForProduct
 } from '../utils/sizeStock.js';
 
 const router = express.Router();
@@ -200,6 +201,13 @@ router.post('/', optionalProtect, async (req, res) => {
             : `No colors are available for ${product.name} size ${item.size}`
         });
       }
+
+      const availableStock = getColorStockForProduct(product, item.size, item.color);
+      if (item.quantity > availableStock) {
+        return res.status(400).json({
+          message: `Only ${availableStock} units of ${product.name} (Size: ${item.size}, Color: ${item.color}) are available in stock. You requested ${item.quantity}.`
+        });
+      }
     }
 
     const normalizedItems = requestedItems.map((item) => {
@@ -243,6 +251,45 @@ router.post('/', optionalProtect, async (req, res) => {
     const order = new Order(orderPayload);
 
     const createdOrder = await order.save();
+
+    // Decrement inventory stock on successful order placement
+    for (const item of normalizedItems) {
+      const product = productMap.get(item.product.toString());
+      if (product) {
+        const sizeKey = item.size;
+        const colorKey = item.color;
+        const qtyToSubtract = item.quantity;
+
+        if (Array.isArray(product.sizePricing)) {
+          const pricingIdx = product.sizePricing.findIndex(
+            (sp) => normalizeSize(sp.size) === normalizeSize(sizeKey)
+          );
+          if (pricingIdx > -1) {
+            const pricing = product.sizePricing[pricingIdx];
+            if (pricing.colorStock && typeof pricing.colorStock.set === 'function') {
+              const currentVal = pricing.colorStock.get(colorKey) || 0;
+              pricing.colorStock.set(colorKey, Math.max(0, currentVal - qtyToSubtract));
+            } else if (pricing.colorStock && typeof pricing.colorStock === 'object') {
+              const currentVal = pricing.colorStock[colorKey] || 0;
+              pricing.colorStock[colorKey] = Math.max(0, currentVal - qtyToSubtract);
+            }
+            pricing.quantity = Math.max(0, (pricing.quantity || 0) - qtyToSubtract);
+          }
+        }
+
+        if (product.sizeStock && typeof product.sizeStock.set === 'function') {
+          const currentVal = product.sizeStock.get(sizeKey) || 0;
+          product.sizeStock.set(sizeKey, Math.max(0, currentVal - qtyToSubtract));
+        } else if (product.sizeStock && typeof product.sizeStock === 'object') {
+          const currentVal = product.sizeStock[sizeKey] || 0;
+          product.sizeStock[sizeKey] = Math.max(0, currentVal - qtyToSubtract);
+        }
+
+        product.markModified('sizePricing');
+        product.markModified('sizeStock');
+        await product.save();
+      }
+    }
 
     if (req.user) {
       await Cart.findOneAndUpdate(

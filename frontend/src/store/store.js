@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { getDisplaySize, getSizePricingForProduct } from '../utils/sizeStock';
+import { getDisplaySize, getSizePricingForProduct, getColorStockForProduct } from '../utils/sizeStock';
 
 export const useAuthStore = create(
   persist(
@@ -84,21 +84,28 @@ export const useCartStore = create(
           return state;
         }
 
+        const maxStock = getColorStockForProduct(product, size, color);
+        if (maxStock <= 0) return state;
+
         const nextItems = [...(state.cart?.items || [])];
         const itemIndex = findItemIndex(nextItems, productId, size, color);
         const normalizedQuantity = Math.max(1, Math.floor(Number(quantity || 1)));
 
         if (itemIndex > -1) {
+          const newQty = Math.min(
+            maxStock,
+            Math.max(1, Math.floor(Number(nextItems[itemIndex].quantity || 1)) + normalizedQuantity)
+          );
           nextItems[itemIndex] = {
             ...nextItems[itemIndex],
-            quantity: Math.max(1, Math.floor(Number(nextItems[itemIndex].quantity || 1)) + normalizedQuantity)
+            quantity: newQty
           };
         } else {
           nextItems.push({
             product,
             size: getDisplaySize(size),
             color: normalizeItemColor(color),
-            quantity: normalizedQuantity
+            quantity: Math.min(maxStock, normalizedQuantity)
           });
         }
 
@@ -122,9 +129,11 @@ export const useCartStore = create(
         if (nextQuantity <= 0) {
           nextItems.splice(itemIndex, 1);
         } else {
+          const item = nextItems[itemIndex];
+          const maxStock = getColorStockForProduct(item.product, size, color);
           nextItems[itemIndex] = {
-            ...nextItems[itemIndex],
-            quantity: nextQuantity
+            ...item,
+            quantity: Math.min(maxStock, nextQuantity)
           };
         }
 

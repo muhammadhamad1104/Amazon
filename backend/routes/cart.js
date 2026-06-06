@@ -9,7 +9,8 @@ import {
   getSizeColorsForProduct,
   isColorAvailableForProduct,
   normalizeColorLabel,
-  normalizeSizeLabel
+  normalizeSizeLabel,
+  getColorStockForProduct
 } from '../utils/sizeStock.js';
 
 const router = express.Router();
@@ -151,6 +152,13 @@ router.post('/add', protect, async (req, res) => {
     const existingQuantity = existingItemIndex > -1 ? cart.items[existingItemIndex].quantity : 0;
     const nextQuantity = existingQuantity + requestedQuantity;
 
+    const availableStock = getColorStockForProduct(product, normalizedSize, normalizedColor);
+    if (nextQuantity > availableStock) {
+      return res.status(400).json({
+        message: `Cannot add more items. Only ${availableStock} units of size ${normalizedSize} / color ${normalizedColor} are available in stock.`
+      });
+    }
+
     if (existingItemIndex > -1) {
       cart.items[existingItemIndex].quantity = nextQuantity;
     } else {
@@ -214,6 +222,20 @@ router.put('/update', protect, async (req, res) => {
     if (nextQuantity <= 0) {
       cart.items.splice(itemIndex, 1);
     } else {
+      const product = await Product.findById(productId);
+      if (!product) {
+        return res.status(404).json({ message: 'Product not found' });
+      }
+
+      const itemSize = cart.items[itemIndex].size;
+      const itemColor = cart.items[itemIndex].color;
+      const availableStock = getColorStockForProduct(product, itemSize, itemColor);
+      if (nextQuantity > availableStock) {
+        return res.status(400).json({
+          message: `Only ${availableStock} units of size ${itemSize} / color ${itemColor} are available in stock.`
+        });
+      }
+
       cart.items[itemIndex].quantity = nextQuantity;
     }
 

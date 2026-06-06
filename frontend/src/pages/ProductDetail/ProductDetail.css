@@ -875,3 +875,45 @@
     font-size: 0.8rem;
   }
 }
+
+/* Stock Breakdown Styles */
+.size-stock-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: #f1f5f9;
+  padding: 0.85rem;
+  border-radius: 6px;
+  border-left: 4px solid #ff9900;
+  margin-top: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.breakdown-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #475569;
+  letter-spacing: 0.05em;
+}
+
+.breakdown-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+}
+
+.breakdown-item {
+  font-size: 0.85rem;
+  color: #334155;
+}
+
+.breakdown-item.out {
+  color: #94a3b8;
+  text-decoration: line-through;
+}
+
+.breakdown-item strong {
+  color: #0f172a;
+}
+

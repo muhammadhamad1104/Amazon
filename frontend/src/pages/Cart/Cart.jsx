@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cartAPI } from '../../api/api';
 import { useCartStore, useAuthStore } from '../../store/store';
@@ -7,7 +7,7 @@ import Loader from '../../components/Loader/Loader';
 import { toast } from 'react-toastify';
 import { formatPKR } from '../../utils/currency';
 import { resolveImageUrl } from '../../utils/media';
-import { getDisplaySize, getSizePricingForProduct } from '../../utils/sizeStock';
+import { getDisplaySize, getSizePricingForProduct, getColorStockForProduct } from '../../utils/sizeStock';
 import PriceDisplay from '../../components/PriceDisplay/PriceDisplay';
 import './Cart.css';
 
@@ -36,6 +36,33 @@ const Cart = () => {
     setLoading(false);
   }, [isAuthenticated]);
 
+  // Local quantity tracking map to prevent race conditions on fast consecutive clicks
+  const [localQuantities, setLocalQuantities] = useState({});
+  const pendingUpdatesRef = useRef({});
+
+  // Synchronize local quantities from cart items
+  useEffect(() => {
+    if (cart?.items) {
+      setLocalQuantities((prev) => {
+        const next = { ...prev };
+        cart.items.forEach((item) => {
+          const key = `${item.product?._id}-${getDisplaySize(item.size)}-${item.color || 'Default'}`;
+          if (!pendingUpdatesRef.current[key]) {
+            next[key] = item.quantity;
+          }
+        });
+        return next;
+      });
+    }
+  }, [cart]);
+
+  // Clean up timeouts on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(pendingUpdatesRef.current).forEach(clearTimeout);
+    };
+  }, []);
+
   const fetchCart = async () => {
     try {
       const { data } = await cartAPI.get();
@@ -47,23 +74,49 @@ const Cart = () => {
     }
   };
 
-  const updateQuantity = async (productId, size, color, newQuantity) => {
-    if (!isAuthenticated) {
-      updateGuestItem({ productId, size, color, quantity: newQuantity });
-      return;
+  const handleQtyChange = (productId, size, color, delta) => {
+    const key = `${productId}-${size}-${color}`;
+    const currentQty = localQuantities[key] ?? 1;
+    const item = cart?.items?.find(
+      (it) => it.product?._id === productId && getDisplaySize(it.size) === size && (it.color || 'Default') === color
+    );
+    if (!item) return;
+
+    const maxStock = getColorStockForProduct(item.product, size, color);
+    const newQty = Math.max(1, Math.min(maxStock, currentQty + delta));
+
+    if (newQty === currentQty) return;
+
+    setLocalQuantities((prev) => ({
+      ...prev,
+      [key]: newQty
+    }));
+
+    if (pendingUpdatesRef.current[key]) {
+      clearTimeout(pendingUpdatesRef.current[key]);
     }
 
-    try {
-      const { data } = await cartAPI.update({
-        productId,
-        size,
-        color,
-        quantity: newQuantity
-      });
-      setCart(data);
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update cart');
-    }
+    pendingUpdatesRef.current[key] = setTimeout(async () => {
+      delete pendingUpdatesRef.current[key];
+      
+      if (!isAuthenticated) {
+        updateGuestItem({ productId, size, color, quantity: newQty });
+        return;
+      }
+
+      try {
+        const { data } = await cartAPI.update({
+          productId,
+          size,
+          color,
+          quantity: newQty
+        });
+        setCart(data);
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Failed to update quantity');
+        fetchCart();
+      }
+    }, 300);
   };
 
   const removeItem = async (productId, size, color) => {
@@ -165,6 +218,10 @@ const Cart = () => {
                 const itemSize = getDisplaySize(item.size);
                 const itemColor = item.color || 'Default';
                 const sizePricing = getSizePricingForProduct(item.product, itemSize);
+                const itemQty = localQuantities[`${item.product?._id}-${itemSize}-${itemColor}`] ?? item.quantity;
+                const maxStock = getColorStockForProduct(item.product, itemSize, itemColor);
+                const isPlusDisabled = itemQty >= maxStock;
+                const isMinusDisabled = itemQty <= 1;
 
                 return (
                 <div key={`${item.product?._id}-${itemSize}-${itemColor}`} className="cart-item">
@@ -178,7 +235,7 @@ const Cart = () => {
                       </Link>
                       <p className="item-brand">{item.product?.brand}</p>
                       <p className="item-size">Size: {itemSize}</p>
-                      <p className="item-size">Color: {itemColor}</p>
+                      <p className="item-size">Color: {itemColor} <span className="item-stock-avail">({maxStock} available)</span></p>
                     </div>
                   </div>
 
@@ -193,15 +250,16 @@ const Cart = () => {
 
                   <div className="item-quantity">
                     <button
-                      onClick={() => updateQuantity(item.product?._id, itemSize, itemColor, item.quantity - 1)}
-                      disabled={item.quantity <= 1}
+                      onClick={() => handleQtyChange(item.product?._id, itemSize, itemColor, -1)}
+                      disabled={isMinusDisabled}
                       className="qty-btn"
                     >
                       <FaMinus />
                     </button>
-                    <span className="qty-value">{item.quantity}</span>
+                    <span className="qty-value">{itemQty}</span>
                     <button
-                      onClick={() => updateQuantity(item.product?._id, itemSize, itemColor, item.quantity + 1)}
+                      onClick={() => handleQtyChange(item.product?._id, itemSize, itemColor, 1)}
+                      disabled={isPlusDisabled}
                       className="qty-btn"
                     >
                       <FaPlus />
@@ -209,7 +267,7 @@ const Cart = () => {
                   </div>
 
                   <div className="item-total">
-                    {formatPKR((sizePricing.price || 0) * item.quantity)}
+                    {formatPKR((sizePricing.price || 0) * itemQty)}
                   </div>
 
                   <div className="item-action">

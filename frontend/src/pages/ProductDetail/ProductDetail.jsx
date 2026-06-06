@@ -414,13 +414,13 @@ const ProductDetail = () => {
               </div>
 
               <div className="size-stock-breakdown">
-                <span className="breakdown-title">Available stock for Size {activeSize}:</span>
+                <label>Stock:</label>
                 <div className="breakdown-list">
                   {sizeColors.map((color) => {
                     const stock = getColorStockForProduct(product, activeSize, color);
                     return (
-                      <span key={color} className={`breakdown-item ${stock === 0 ? 'out' : ''}`}>
-                        {color}: <strong>{stock > 0 ? stock : 'Sold Out'}</strong>
+                      <span key={color} className={`breakdown-pill ${stock === 0 ? 'out' : ''}`}>
+                        {color} ({stock > 0 ? stock : 'Sold Out'})
                       </span>
                     );
                   })}

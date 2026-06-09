@@ -37,12 +37,36 @@ const CategoryScrollRow = ({ title, description, products }) => {
 
   const scroll = (direction) => {
     if (scrollContainerRef.current) {
-      const { scrollLeft, clientWidth } = scrollContainerRef.current;
+      const { scrollLeft, clientWidth, scrollWidth } = scrollContainerRef.current;
       const scrollAmount = clientWidth * 0.8;
-      scrollContainerRef.current.scrollTo({
-        left: direction === 'left' ? scrollLeft - scrollAmount : scrollLeft + scrollAmount,
-        behavior: 'smooth'
-      });
+
+      if (direction === 'left') {
+        if (scrollLeft <= 5) {
+          // Loop around to end
+          scrollContainerRef.current.scrollTo({
+            left: scrollWidth - clientWidth,
+            behavior: 'smooth'
+          });
+        } else {
+          scrollContainerRef.current.scrollTo({
+            left: scrollLeft - scrollAmount,
+            behavior: 'smooth'
+          });
+        }
+      } else {
+        if (scrollLeft + clientWidth >= scrollWidth - 10) {
+          // Loop around to start
+          scrollContainerRef.current.scrollTo({
+            left: 0,
+            behavior: 'smooth'
+          });
+        } else {
+          scrollContainerRef.current.scrollTo({
+            left: scrollLeft + scrollAmount,
+            behavior: 'smooth'
+          });
+        }
+      }
     }
   };
 

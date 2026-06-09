@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { FaWhatsapp } from 'react-icons/fa';
 import { productsAPI } from '../../api/api';
@@ -8,6 +8,79 @@ import CategorySidebar from '../../components/CategorySidebar/CategorySidebar';
 import AdTicker from '../../components/AdTicker/AdTicker';
 import { toast } from 'react-toastify';
 import './Home.css';
+
+const CATEGORY_DETAILS = {
+  "Women's Unstitched Collection": {
+    title: "Women's Unstitched Collection",
+    description: "Step into the season with our premium unstitched fabrics, designed to turn heads and made to last."
+  },
+  "Kids wear": {
+    title: "Kids Wear",
+    description: "Bright, comfortable, and playful outfits designed for your little ones' active days."
+  },
+  "Thrifted pre-loved shoes": {
+    title: "Thrifted Pre-Loved Shoes",
+    description: "Step sustainably and stylishly in our curated collection of premium pre-loved shoes."
+  },
+  "Accessories": {
+    title: "Accessories",
+    description: "The perfect finishing touches to elevate any look, from statement bags to elegant jewelry."
+  },
+  "Beauty": {
+    title: "Beauty & Cosmetics",
+    description: "Reveal your natural radiance with our carefully selected beauty and skincare essentials."
+  }
+};
+
+const CategoryScrollRow = ({ title, description, products }) => {
+  const scrollContainerRef = useRef(null);
+
+  const scroll = (direction) => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, clientWidth } = scrollContainerRef.current;
+      const scrollAmount = clientWidth * 0.8;
+      scrollContainerRef.current.scrollTo({
+        left: direction === 'left' ? scrollLeft - scrollAmount : scrollLeft + scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  return (
+    <div className="category-scroll-section">
+      <div className="category-header-block">
+        <h2 className="category-section-title">{title}</h2>
+        {description && <p className="category-section-description">{description}</p>}
+      </div>
+
+      <div className="scroll-wrapper">
+        <button
+          className="scroll-arrow-btn scroll-arrow-left"
+          onClick={() => scroll('left')}
+          aria-label="Scroll left"
+        >
+          &#8249;
+        </button>
+
+        <div className="category-scroll-container" ref={scrollContainerRef}>
+          {products.map((product) => (
+            <div key={product._id} className="scroll-product-card-wrapper">
+              <ProductCard product={product} />
+            </div>
+          ))}
+        </div>
+
+        <button
+          className="scroll-arrow-btn scroll-arrow-right"
+          onClick={() => scroll('right')}
+          aria-label="Scroll right"
+        >
+          &#8250;
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const Home = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -28,6 +101,16 @@ const Home = () => {
     fetchFeaturedProducts();
   }, []);
 
+  // Group products by top-level category
+  const categoriesWithProducts = Object.keys(CATEGORY_DETAILS).map((catName) => {
+    const products = featuredProducts.filter((p) => p.category === catName);
+    return {
+      name: catName,
+      details: CATEGORY_DETAILS[catName],
+      products
+    };
+  }).filter((item) => item.products.length > 0);
+
   return (
     <div className="home">
       {/* Main Content Area with Sidebar and Ad */}
@@ -43,18 +126,23 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Featured Products */}
+      {/* Featured Products by Category */}
       <section className="featured-section">
         <div className="container">
-          <h2 className="section-title">Featured Products</h2>
-          
           {loading ? (
             <Loader />
+          ) : categoriesWithProducts.length > 0 ? (
+            categoriesWithProducts.map((item) => (
+              <CategoryScrollRow
+                key={item.name}
+                title={item.details.title}
+                description={item.details.description}
+                products={item.products}
+              />
+            ))
           ) : (
-            <div className="products-grid">
-              {featuredProducts.map((product) => (
-                <ProductCard key={product._id} product={product} />
-              ))}
+            <div className="no-products-found">
+              <p>No featured products available at the moment.</p>
             </div>
           )}
 
